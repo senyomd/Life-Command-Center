@@ -300,6 +300,8 @@ body.mode-finance .page-eyebrow       { color: rgba(123,156,255,.7); }
   transition: color 0.3s;
 }
 body.mode-learning .pomo-display { color: #22c55e; }
+body.mode-work .pomo-display     { color: #4f8ef7; }
+body.mode-class .pomo-display    { color: #a855f7; }
 
 /* progress bar */
 .pomo-progress-track {
@@ -314,8 +316,10 @@ body.mode-learning .pomo-display { color: #22c55e; }
   width: 0%;
   background: #22c55e;
   border-radius: 2px;
-  transition: width 1s linear;
+  transition: width 1s linear, background 0.4s ease;
 }
+body.mode-work .pomo-progress-bar  { background: #4f8ef7; }
+body.mode-class .pomo-progress-bar { background: #a855f7; }
 
 /* duration input row */
 .pomo-duration-row {
@@ -340,7 +344,9 @@ body.mode-learning .pomo-display { color: #22c55e; }
   outline: none;
   transition: border-color 0.2s;
 }
-.pomo-duration-input:focus { border-color: #22c55e; }
+body.mode-learning .pomo-duration-input:focus { border-color: #22c55e; }
+body.mode-work .pomo-duration-input:focus     { border-color: #4f8ef7; }
+body.mode-class .pomo-duration-input:focus    { border-color: #a855f7; }
 .pomo-duration-input::-webkit-inner-spin-button,
 .pomo-duration-input::-webkit-outer-spin-button { opacity: 1; }
 
@@ -362,6 +368,11 @@ body.mode-learning .pomo-display { color: #22c55e; }
 .pomo-btn-pause  { background: var(--s3); color: var(--text); border: 1px solid var(--border2); }
 .pomo-btn-resume { background: #22c55e; color: #000; }
 .pomo-btn-stop   { background: rgba(239,68,68,.15); color: #ef4444; border: 1px solid rgba(239,68,68,.25); }
+
+body.mode-work .pomo-btn-start,
+body.mode-work .pomo-btn-resume  { background: #4f8ef7; color: #000; }
+body.mode-class .pomo-btn-start,
+body.mode-class .pomo-btn-resume { background: #a855f7; color: #fff; }
 
 /* history card */
 .pomo-history-card { min-height: 200px; }
@@ -385,8 +396,11 @@ body.mode-learning .pomo-display { color: #22c55e; }
   font-size: 10px; font-weight: 700; padding: 3px 8px;
   border-radius: 6px;
 }
-.pomo-session-tag.done      { background: rgba(34,197,94,.1);   color: #22c55e; }
-.pomo-session-tag.stopped   { background: rgba(239,68,68,.1);   color: #ef4444; }
+.pomo-session-tag.done      { background: rgba(34,197,94,.1);  color: #22c55e; }
+.pomo-session-tag.stopped   { background: rgba(239,68,68,.1);  color: #ef4444; }
+
+body.mode-work .pomo-session-tag.done  { background: rgba(79,142,247,.1);  color: #4f8ef7; }
+body.mode-class .pomo-session-tag.done { background: rgba(168,85,247,.1);  color: #a855f7; }
 
 .pomo-session-ratings {
   display: flex; gap: 6px;
@@ -452,3 +466,21 @@ body.mode-learning .pomo-display { color: #22c55e; }
 .modal-btn:hover { opacity: 0.82; }
 .modal-btn-skip { background: var(--s3); color: var(--muted); border: 1px solid var(--border); }
 .modal-btn-save { background: #22c55e; color: #000; }
+
+body.mode-work .modal-btn-save  { background: #4f8ef7; color: #000; }
+body.mode-class .modal-btn-save { background: #a855f7; color: #fff; }
+
+/* status badge overrides for work/class */
+body.mode-work .pomo-status-badge          { background: rgba(79,142,247,.08); border-color: rgba(79,142,247,.2);  color: #4f8ef7; }
+body.mode-work .pomo-status-badge.running  { background: rgba(79,142,247,.15); border-color: rgba(79,142,247,.4);  color: #4f8ef7; }
+body.mode-work .pomo-status-badge.complete { background: rgba(79,142,247,.2);  border-color: rgba(79,142,247,.5);  color: #4f8ef7; }
+
+body.mode-class .pomo-status-badge          { background: rgba(168,85,247,.08); border-color: rgba(168,85,247,.2); color: #a855f7; }
+body.mode-class .pomo-status-badge.running  { background: rgba(168,85,247,.15); border-color: rgba(168,85,247,.4); color: #a855f7; }
+body.mode-class .pomo-status-badge.complete { background: rgba(168,85,247,.2);  border-color: rgba(168,85,247,.5); color: #a855f7; }
+
+/* star button overrides for work/class */
+body.mode-work .star-btn:hover,
+body.mode-work .star-btn.active  { border-color: #4f8ef7; color: #4f8ef7; background: rgba(79,142,247,.12); }
+body.mode-class .star-btn:hover,
+body.mode-class .star-btn.active { border-color: #a855f7; color: #a855f7; background: rgba(168,85,247,.12); }

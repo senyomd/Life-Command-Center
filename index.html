@@ -101,9 +101,34 @@
       <h1 class="page-title">Work</h1>
       <p class="page-sub">Internships, job applications, professional growth</p>
     </div>
-    <div class="card">
-      <div class="card-label">Coming Next</div>
-      <p class="placeholder-text">This is where your job applications, work tasks, and career tracking will live.<br>Next step: build this out.</p>
+
+    <div class="pomo-layout">
+      <div class="card pomo-card">
+        <div class="card-label">Focus Timer</div>
+        <div class="pomo-status-row">
+          <span class="pomo-status-badge" id="work-pomo-status">Ready</span>
+        </div>
+        <div class="pomo-display" id="work-timer-display">25:00</div>
+        <div class="pomo-progress-track">
+          <div class="pomo-progress-bar" id="work-pomo-progress"></div>
+        </div>
+        <div class="pomo-duration-row">
+          <label class="pomo-duration-label">Duration (minutes)</label>
+          <input class="pomo-duration-input" id="work-pomo-duration" type="number" min="1" max="120" value="25" />
+        </div>
+        <div class="pomo-controls">
+          <button class="pomo-btn pomo-btn-start"  id="work-btn-start"  onclick="pomodoroUI_work.start()">Start</button>
+          <button class="pomo-btn pomo-btn-pause"  id="work-btn-pause"  onclick="pomodoroUI_work.pause()"  style="display:none">Pause</button>
+          <button class="pomo-btn pomo-btn-resume" id="work-btn-resume" onclick="pomodoroUI_work.resume()" style="display:none">Resume</button>
+          <button class="pomo-btn pomo-btn-stop"   id="work-btn-stop"   onclick="pomodoroUI_work.stop()"   style="display:none">Stop</button>
+        </div>
+      </div>
+      <div class="card pomo-history-card">
+        <div class="card-label">Recent Sessions</div>
+        <div id="work-pomo-history-list">
+          <p class="placeholder-text">No sessions yet — start your first one.</p>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -169,9 +194,34 @@
       <h1 class="page-title">Class</h1>
       <p class="page-sub">Coursework, assignments, exams</p>
     </div>
-    <div class="card">
-      <div class="card-label">Coming Next</div>
-      <p class="placeholder-text">CS331, CPSC 327, CPSC 433, religion — assignments and study tracking.<br>Next step: build this out.</p>
+
+    <div class="pomo-layout">
+      <div class="card pomo-card">
+        <div class="card-label">Focus Timer</div>
+        <div class="pomo-status-row">
+          <span class="pomo-status-badge" id="class-pomo-status">Ready</span>
+        </div>
+        <div class="pomo-display" id="class-timer-display">25:00</div>
+        <div class="pomo-progress-track">
+          <div class="pomo-progress-bar" id="class-pomo-progress"></div>
+        </div>
+        <div class="pomo-duration-row">
+          <label class="pomo-duration-label">Duration (minutes)</label>
+          <input class="pomo-duration-input" id="class-pomo-duration" type="number" min="1" max="120" value="25" />
+        </div>
+        <div class="pomo-controls">
+          <button class="pomo-btn pomo-btn-start"  id="class-btn-start"  onclick="pomodoroUI_class.start()">Start</button>
+          <button class="pomo-btn pomo-btn-pause"  id="class-btn-pause"  onclick="pomodoroUI_class.pause()"  style="display:none">Pause</button>
+          <button class="pomo-btn pomo-btn-resume" id="class-btn-resume" onclick="pomodoroUI_class.resume()" style="display:none">Resume</button>
+          <button class="pomo-btn pomo-btn-stop"   id="class-btn-stop"   onclick="pomodoroUI_class.stop()"   style="display:none">Stop</button>
+        </div>
+      </div>
+      <div class="card pomo-history-card">
+        <div class="card-label">Recent Sessions</div>
+        <div id="class-pomo-history-list">
+          <p class="placeholder-text">No sessions yet — start your first one.</p>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -232,8 +282,8 @@
     </div>
 
     <div class="modal-actions">
-      <button class="modal-btn modal-btn-skip" onclick="pomodoroUI.skipRating()">Skip</button>
-      <button class="modal-btn modal-btn-save" onclick="pomodoroUI.saveRating()">Save</button>
+      <button class="modal-btn modal-btn-skip" onclick="skipRating()">Skip</button>
+      <button class="modal-btn modal-btn-save" onclick="saveRating()">Save</button>
     </div>
   </div>
 </div>
