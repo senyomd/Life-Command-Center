@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Life Command Center</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body class="mode-home">
+
+<!-- ── HEADER ── -->
+<header class="header">
+  <div class="header-left">
+    <div class="logo-mark" onclick="navigateTo('home')" title="Home">⚡</div>
+    <div>
+      <div class="logo-title">Life Command Center</div>
+      <div class="logo-sub">Personal OS</div>
+    </div>
+  </div>
+
+  <div class="mode-badge">
+    <span class="badge-dot"></span>
+    <span id="mode-label">Home</span>
+  </div>
+
+  <div style="display:flex;align-items:center;gap:14px;">
+    <div class="streak-chip">
+      <span class="streak-fire">🔥</span>
+      <span class="streak-count" id="streak-count">0</span>
+      <span class="streak-label">day streak</span>
+    </div>
+    <div>
+      <div class="clock-time" id="clock-time">00:00</div>
+      <div class="clock-date" id="clock-date">—</div>
+    </div>
+  </div>
+</header>
+
+<!-- ── NAV ── -->
+<nav class="nav-tabs">
+  <button class="nav-btn active" data-mode="home"          onclick="navigateTo('home')">🏠 Home</button>
+  <button class="nav-btn"        data-mode="work"          onclick="navigateTo('work')">💼 Work</button>
+  <button class="nav-btn"        data-mode="learning"      onclick="navigateTo('learning')">🧠 Personal Learning</button>
+  <button class="nav-btn"        data-mode="class"         onclick="navigateTo('class')">📚 Class</button>
+  <button class="nav-btn"        data-mode="entertainment" onclick="navigateTo('entertainment')">🎬 Entertainment</button>
+  <button class="nav-btn"        data-mode="finance"       onclick="navigateTo('finance')">💸 Finance</button>
+</nav>
+
+<!-- ── PAGES ── -->
+<div class="main">
+
+  <!-- HOME -->
+  <div id="page-home" class="page active">
+    <div class="page-header">
+      <div class="page-eyebrow">Overview</div>
+      <h1 class="page-title">Dashboard</h1>
+      <p class="page-sub">Your life at a glance — aggregated across all modes</p>
+    </div>
+
+    <div class="card" style="max-width:320px;">
+      <div class="card-label">Weekly Focus Score</div>
+      <div class="score-ring">
+        <div class="score-num">—</div>
+        <div class="score-label">No data yet</div>
+      </div>
+    </div>
+
+    <div class="home-grid">
+      <div class="mode-card mc-work" onclick="navigateTo('work')">
+        <div class="mc-icon">💼</div>
+        <div class="mc-title">Work</div>
+        <div class="mc-sub">Job apps, internships, professional tasks</div>
+      </div>
+      <div class="mode-card mc-learning" onclick="navigateTo('learning')">
+        <div class="mc-icon">🧠</div>
+        <div class="mc-title">Personal Learning</div>
+        <div class="mc-sub">LeetCode, Grounded Quant, side projects</div>
+      </div>
+      <div class="mode-card mc-class" onclick="navigateTo('class')">
+        <div class="mc-icon">📚</div>
+        <div class="mc-title">Class</div>
+        <div class="mc-sub">CS331, CPSC 327, CPSC 433, religion</div>
+      </div>
+      <div class="mode-card mc-entertainment" onclick="navigateTo('entertainment')">
+        <div class="mc-icon">🎬</div>
+        <div class="mc-title">Entertainment</div>
+        <div class="mc-sub">Movies, shows, YouTube, books</div>
+      </div>
+      <div class="mode-card mc-finance" onclick="navigateTo('finance')">
+        <div class="mc-icon">💸</div>
+        <div class="mc-title">Finance</div>
+        <div class="mc-sub">Income, expenses, financial tracking</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- WORK -->
+  <div id="page-work" class="page">
+    <div class="page-header">
+      <div class="page-eyebrow">Work Mode</div>
+      <h1 class="page-title">Work</h1>
+      <p class="page-sub">Internships, job applications, professional growth</p>
+    </div>
+    <div class="card">
+      <div class="card-label">Coming Next</div>
+      <p class="placeholder-text">This is where your job applications, work tasks, and career tracking will live.<br>Next step: build this out.</p>
+    </div>
+  </div>
+
+  <!-- LEARNING -->
+  <div id="page-learning" class="page">
+    <div class="page-header">
+      <div class="page-eyebrow">Personal Learning</div>
+      <h1 class="page-title">Personal Learning</h1>
+      <p class="page-sub">LeetCode, side projects, self-directed growth</p>
+    </div>
+
+    <div class="pomo-layout">
+
+      <!-- TIMER CARD -->
+      <div class="card pomo-card">
+        <div class="card-label">Focus Timer</div>
+
+        <div class="pomo-status-row">
+          <span class="pomo-status-badge" id="pomo-status">Ready</span>
+        </div>
+
+        <div class="pomo-display" id="timer-display">25:00</div>
+
+        <div class="pomo-progress-track">
+          <div class="pomo-progress-bar" id="pomo-progress"></div>
+        </div>
+
+        <div class="pomo-duration-row">
+          <label class="pomo-duration-label">Duration (minutes)</label>
+          <input
+            class="pomo-duration-input"
+            id="pomo-duration"
+            type="number"
+            min="1"
+            max="120"
+            value="25"
+          />
+        </div>
+
+        <div class="pomo-controls" id="pomo-controls">
+          <button class="pomo-btn pomo-btn-start"  id="btn-start"  onclick="pomodoroUI.start()">Start</button>
+          <button class="pomo-btn pomo-btn-pause"  id="btn-pause"  onclick="pomodoroUI.pause()"  style="display:none">Pause</button>
+          <button class="pomo-btn pomo-btn-resume" id="btn-resume" onclick="pomodoroUI.resume()" style="display:none">Resume</button>
+          <button class="pomo-btn pomo-btn-stop"   id="btn-stop"   onclick="pomodoroUI.stop()"   style="display:none">Stop</button>
+        </div>
+      </div>
+
+      <!-- SESSION HISTORY CARD -->
+      <div class="card pomo-history-card">
+        <div class="card-label">Recent Sessions</div>
+        <div id="pomo-history-list">
+          <p class="placeholder-text">No sessions yet — start your first one.</p>
+        </div>
+      </div>
+
+    </div><!-- /pomo-layout -->
+  </div>
+
+  <!-- CLASS -->
+  <div id="page-class" class="page">
+    <div class="page-header">
+      <div class="page-eyebrow">Class Mode</div>
+      <h1 class="page-title">Class</h1>
+      <p class="page-sub">Coursework, assignments, exams</p>
+    </div>
+    <div class="card">
+      <div class="card-label">Coming Next</div>
+      <p class="placeholder-text">CS331, CPSC 327, CPSC 433, religion — assignments and study tracking.<br>Next step: build this out.</p>
+    </div>
+  </div>
+
+  <!-- ENTERTAINMENT -->
+  <div id="page-entertainment" class="page">
+    <div class="page-header">
+      <div class="page-eyebrow">Entertainment</div>
+      <h1 class="page-title">Entertainment</h1>
+      <p class="page-sub">Movies, shows, YouTube, books — consumption with intention</p>
+    </div>
+    <div class="card">
+      <div class="card-label">Coming Next</div>
+      <p class="placeholder-text">Watchlist, progress tracking, mood tagging, time spent.<br>Next step: build this out.</p>
+    </div>
+  </div>
+
+  <!-- FINANCE -->
+  <div id="page-finance" class="page">
+    <div class="page-header">
+      <div class="page-eyebrow">Finance</div>
+      <h1 class="page-title">Finance</h1>
+      <p class="page-sub">Income, expenses, recurring entries</p>
+    </div>
+    <div class="card">
+      <div class="card-label">Coming Next</div>
+      <p class="placeholder-text">Budget tracking, categories, monthly trends.<br>Next step: build this out.</p>
+    </div>
+  </div>
+
+</div><!-- /main -->
+
+<!-- RATING MODAL -->
+<div class="modal-overlay" id="rating-modal" style="display:none">
+  <div class="modal-box">
+    <div class="modal-title">Session Complete</div>
+    <p class="modal-sub">Nice work. How did that feel?</p>
+
+    <div class="rating-group">
+      <div class="rating-label">Energy Level</div>
+      <div class="rating-stars" id="energy-stars">
+        <button class="star-btn" data-group="energy" data-val="1">1</button>
+        <button class="star-btn" data-group="energy" data-val="2">2</button>
+        <button class="star-btn" data-group="energy" data-val="3">3</button>
+        <button class="star-btn" data-group="energy" data-val="4">4</button>
+        <button class="star-btn" data-group="energy" data-val="5">5</button>
+      </div>
+    </div>
+
+    <div class="rating-group">
+      <div class="rating-label">Focus Quality</div>
+      <div class="rating-stars" id="focus-stars">
+        <button class="star-btn" data-group="focus" data-val="1">1</button>
+        <button class="star-btn" data-group="focus" data-val="2">2</button>
+        <button class="star-btn" data-group="focus" data-val="3">3</button>
+        <button class="star-btn" data-group="focus" data-val="4">4</button>
+        <button class="star-btn" data-group="focus" data-val="5">5</button>
+      </div>
+    </div>
+
+    <div class="modal-actions">
+      <button class="modal-btn modal-btn-skip" onclick="pomodoroUI.skipRating()">Skip</button>
+      <button class="modal-btn modal-btn-save" onclick="pomodoroUI.saveRating()">Save</button>
+    </div>
+  </div>
+</div>
+
+<script src="PomodoroEngine.js"></script>
+<script src="app.js"></script>
+
+</body>
+</html>
