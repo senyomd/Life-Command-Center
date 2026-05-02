@@ -484,3 +484,174 @@ body.mode-work .star-btn:hover,
 body.mode-work .star-btn.active  { border-color: #4f8ef7; color: #4f8ef7; background: rgba(79,142,247,.12); }
 body.mode-class .star-btn:hover,
 body.mode-class .star-btn.active { border-color: #a855f7; color: #a855f7; background: rgba(168,85,247,.12); }
+
+/* ── HABIT TRACKER ── */
+.habit-tracker-card {
+  margin-top: 16px;
+  overflow: hidden;
+}
+
+/* scrollable wrapper so the grid never breaks layout on narrow screens */
+.habit-grid-wrap {
+  overflow-x: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border2) transparent;
+}
+
+.habit-grid {
+  display: grid;
+  grid-template-columns: minmax(148px, 200px) repeat(7, minmax(42px, 1fr));
+  gap: 3px;
+  min-width: 480px;
+}
+
+/* corner */
+.habit-grid-corner { /* empty top-left cell */ }
+
+/* day headers */
+.habit-day-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 4px 2px 8px;
+  gap: 2px;
+}
+.habit-day-name {
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.habit-day-date {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--muted);
+}
+.habit-day-header.is-today .habit-day-name,
+.habit-day-header.is-today .habit-day-date {
+  color: var(--text);
+}
+.habit-day-header.is-today .habit-day-date {
+  background: rgba(79,142,247,.12);
+  border: 1px solid rgba(79,142,247,.25);
+  border-radius: 6px;
+  padding: 1px 5px;
+  color: #4f8ef7;
+  font-weight: 700;
+}
+
+/* habit name cells */
+.habit-row-name {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 4px 0;
+  min-height: 42px;
+}
+.habit-row-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text);
+  line-height: 1.3;
+}
+.habit-auto-tag {
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  padding: 2px 5px;
+  border-radius: 4px;
+  background: var(--s3);
+  color: var(--muted);
+  border: 1px solid var(--border);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* day cells */
+.habit-cell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 40px;
+  border-radius: 9px;
+  border: 1px solid var(--border);
+  font-size: 14px;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, transform 0.1s;
+  user-select: none;
+}
+.habit-cell:hover:not(.future):not(.auto) {
+  border-color: var(--border2);
+  background: var(--s2);
+}
+.habit-cell:active:not(.future):not(.auto) {
+  transform: scale(0.92);
+}
+
+/* completed */
+.habit-cell.completed {
+  background: rgba(34,197,94,.13);
+  border-color: rgba(34,197,94,.32);
+  color: #22c55e;
+  font-size: 15px;
+}
+
+/* missed (past, not done) */
+.habit-cell.missed {
+  background: rgba(239,68,68,.06);
+  border-color: rgba(239,68,68,.14);
+  color: rgba(239,68,68,.45);
+  font-size: 13px;
+}
+
+/* future */
+.habit-cell.future {
+  cursor: not-allowed;
+  opacity: 0.28;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+/* auto (read-only) */
+.habit-cell.auto {
+  cursor: not-allowed;
+}
+.habit-cell.auto:hover {
+  background: initial;
+  border-color: initial;
+  transform: none;
+}
+.habit-cell.auto.completed:hover {
+  background: rgba(34,197,94,.13);
+  border-color: rgba(34,197,94,.32);
+}
+.habit-cell.auto.missed:hover {
+  background: rgba(239,68,68,.06);
+  border-color: rgba(239,68,68,.14);
+}
+
+/* ── STREAK ROW ── */
+.habit-streak-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+}
+
+.habit-streak-chip {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 11px;
+  background: var(--s2);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  font-size: 11px;
+}
+.hsc-name    { font-weight: 700; color: var(--muted2); }
+.hsc-current { font-weight: 800; color: #22c55e; }
+.hsc-best    { color: var(--muted); }
