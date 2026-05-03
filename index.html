@@ -44,6 +44,7 @@
   <button class="nav-btn"        data-mode="class"         onclick="navigateTo('class')">📚 Class</button>
   <button class="nav-btn"        data-mode="entertainment" onclick="navigateTo('entertainment')">🎬 Entertainment</button>
   <button class="nav-btn"        data-mode="finance"       onclick="navigateTo('finance')">💸 Finance</button>
+  <button class="nav-btn"        data-mode="stats"         onclick="navigateTo('stats')">📊 Stats</button>
 </nav>
 
 <!-- ── PAGES ── -->
@@ -57,11 +58,43 @@
       <p class="page-sub">Your life at a glance — aggregated across all modes</p>
     </div>
 
-    <div class="card" style="max-width:320px;">
+    <!-- FOCUS SCORE + SPARKLINE -->
+    <div class="card focus-score-card">
       <div class="card-label">Weekly Focus Score</div>
-      <div class="score-ring">
-        <div class="score-num">—</div>
-        <div class="score-label">No data yet</div>
+      <div class="fs-body">
+        <div class="fs-ring-wrap">
+          <svg class="fs-ring" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
+            <circle class="fs-ring-bg"   cx="60" cy="60" r="52"/>
+            <circle class="fs-ring-fill" cx="60" cy="60" r="52" id="focus-ring-fill"/>
+          </svg>
+          <div class="fs-ring-inner">
+            <div class="fs-score" id="focus-score-num">—</div>
+            <div class="fs-delta" id="focus-score-delta"></div>
+          </div>
+        </div>
+        <div class="fs-right">
+          <div class="fs-sparkline-label">Daily Scores — This Week</div>
+          <svg id="focus-sparkline" class="fs-sparkline" viewBox="0 0 280 60" preserveAspectRatio="none"></svg>
+          <div class="fs-sparkline-days" id="focus-sparkline-days"></div>
+          <div class="metric-cards" id="metric-cards-row">
+            <div class="metric-card" id="mc-tasks">
+              <div class="mc-val">—</div>
+              <div class="mc-key">Task Execution</div>
+            </div>
+            <div class="metric-card" id="mc-habits">
+              <div class="mc-val">—</div>
+              <div class="mc-key">Habit Consistency</div>
+            </div>
+            <div class="metric-card" id="mc-focus-time">
+              <div class="mc-val">—</div>
+              <div class="mc-key">Focus Hours</div>
+            </div>
+            <div class="metric-card" id="mc-deep-work">
+              <div class="mc-val">—</div>
+              <div class="mc-key">Deep Work Ratio</div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -261,6 +294,39 @@
     </div>
   </div>
 
+  <!-- STATS -->
+  <div id="page-stats" class="page">
+    <div class="page-header">
+      <div class="page-eyebrow">Analytics</div>
+      <h1 class="page-title">Stats</h1>
+      <p class="page-sub">This week vs last week, trends, and breakdowns</p>
+    </div>
+
+    <!-- WEEK COMPARISON -->
+    <div class="card stats-compare-card">
+      <div class="card-label">Week Comparison</div>
+      <div id="stats-comparison">
+        <p class="placeholder-text">Loading…</p>
+      </div>
+    </div>
+
+    <!-- MODE BREAKDOWN -->
+    <div class="card" style="margin-top:16px;">
+      <div class="card-label">Mode Breakdown — This Week</div>
+      <div id="stats-mode-breakdown">
+        <p class="placeholder-text">Loading…</p>
+      </div>
+    </div>
+
+    <!-- MONTHLY TRENDS -->
+    <div class="card" style="margin-top:16px;">
+      <div class="card-label">Monthly Trends — Last 4 Weeks</div>
+      <div id="stats-monthly-trends">
+        <p class="placeholder-text">Loading…</p>
+      </div>
+    </div>
+  </div>
+
 </div><!-- /main -->
 
 <!-- RATING MODAL -->
@@ -300,6 +366,7 @@
 
 <script src="PomodoroEngine.js"></script>
 <script src="HabitEngine.js"></script>
+<script src="AnalyticsEngine.js"></script>
 <script src="app.js"></script>
 
 </body>

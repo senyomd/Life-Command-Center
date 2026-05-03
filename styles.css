@@ -655,3 +655,274 @@ body.mode-class .star-btn.active { border-color: #a855f7; color: #a855f7; backgr
 .hsc-name    { font-weight: 700; color: var(--muted2); }
 .hsc-current { font-weight: 800; color: #22c55e; }
 .hsc-best    { color: var(--muted); }
+
+/* ── FOCUS SCORE CARD ── */
+.focus-score-card {
+  margin-bottom: 16px;
+}
+
+.fs-body {
+  display: flex;
+  gap: 32px;
+  align-items: flex-start;
+}
+
+/* SVG ring */
+.fs-ring-wrap {
+  position: relative;
+  width: 140px;
+  height: 140px;
+  flex-shrink: 0;
+}
+.fs-ring {
+  width: 140px;
+  height: 140px;
+  transform: rotate(-90deg);
+}
+.fs-ring-bg {
+  fill: none;
+  stroke: var(--s3);
+  stroke-width: 10;
+}
+.fs-ring-fill {
+  fill: none;
+  stroke: #4f8ef7;
+  stroke-width: 10;
+  stroke-linecap: round;
+  stroke-dasharray: 326.73 326.73;
+  stroke-dashoffset: 326.73;
+  transition: stroke-dashoffset 0.8s cubic-bezier(.4,0,.2,1), stroke 0.4s;
+}
+.fs-ring-inner {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+}
+.fs-score {
+  font-size: 38px;
+  font-weight: 900;
+  letter-spacing: -2px;
+  color: var(--text);
+  line-height: 1;
+}
+.fs-delta {
+  font-size: 11px;
+  font-weight: 700;
+  border-radius: 6px;
+  padding: 2px 6px;
+  min-width: 36px;
+  text-align: center;
+}
+.fs-delta.pos { background: rgba(34,197,94,.12); color: #22c55e; }
+.fs-delta.neg { background: rgba(239,68,68,.1);  color: #ef4444; }
+.fs-delta.neu { background: var(--s3); color: var(--muted); }
+
+/* right side of focus score card */
+.fs-right {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+}
+
+.fs-sparkline-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.fs-sparkline {
+  width: 100%;
+  height: 60px;
+  display: block;
+  overflow: visible;
+}
+
+.fs-sparkline-days {
+  display: flex;
+  justify-content: space-between;
+  padding: 0 4px;
+}
+.fs-sparkline-days span {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  color: var(--muted);
+  text-transform: uppercase;
+}
+.fs-sparkline-days span.is-today { color: #4f8ef7; }
+
+/* ── METRIC CARDS ROW ── */
+.metric-cards {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+}
+@media (max-width: 900px) {
+  .fs-body { flex-direction: column; }
+  .metric-cards { grid-template-columns: repeat(2, 1fr); }
+}
+
+.metric-card {
+  background: var(--s2);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.mc-val {
+  font-size: 22px;
+  font-weight: 900;
+  letter-spacing: -1px;
+  color: var(--text);
+  line-height: 1;
+}
+.mc-val .mc-unit {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted2);
+  margin-left: 2px;
+}
+.mc-key {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.mc-delta {
+  font-size: 10px;
+  font-weight: 700;
+  margin-top: 2px;
+}
+.mc-delta.pos { color: #22c55e; }
+.mc-delta.neg { color: #ef4444; }
+.mc-delta.neu { color: var(--muted); }
+
+/* ── STATS PAGE ── */
+.stats-compare-card { }
+
+/* comparison grid */
+.stats-compare-grid {
+  display: grid;
+  grid-template-columns: 1fr 100px 100px 64px;
+  gap: 0;
+}
+.stats-compare-grid .sc-head {
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  color: var(--muted);
+  padding: 6px 0 10px;
+}
+.stats-compare-grid .sc-head:not(:first-child) { text-align: right; }
+
+.stats-compare-row {
+  display: contents;
+}
+.stats-compare-row > div {
+  padding: 10px 0;
+  border-top: 1px solid var(--border);
+  font-size: 13px;
+}
+.sc-metric {
+  font-weight: 600;
+  color: var(--muted2);
+}
+.sc-val {
+  text-align: right;
+  font-weight: 700;
+  color: var(--text);
+}
+.sc-val.muted { color: var(--muted); }
+.sc-delta-cell {
+  text-align: right;
+  font-weight: 700;
+  font-size: 12px;
+}
+.sc-delta-cell.pos { color: #22c55e; }
+.sc-delta-cell.neg { color: #ef4444; }
+.sc-delta-cell.neu { color: var(--muted); }
+
+/* mode breakdown bars */
+.mode-bar-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.mode-bar-row:last-child { margin-bottom: 0; }
+.mode-bar-label {
+  font-size: 12px;
+  font-weight: 700;
+  width: 90px;
+  flex-shrink: 0;
+  color: var(--muted2);
+}
+.mode-bar-track {
+  flex: 1;
+  height: 8px;
+  background: var(--s3);
+  border-radius: 4px;
+  overflow: hidden;
+}
+.mode-bar-fill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.6s cubic-bezier(.4,0,.2,1);
+}
+.mode-bar-fill.work     { background: #4f8ef7; }
+.mode-bar-fill.learning { background: #22c55e; }
+.mode-bar-fill.class    { background: #a855f7; }
+.mode-bar-pct {
+  font-size: 11px;
+  font-weight: 700;
+  width: 36px;
+  text-align: right;
+  color: var(--muted2);
+}
+
+/* monthly trends table */
+.trends-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.trends-table th {
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  color: var(--muted);
+  text-align: right;
+  padding: 0 8px 10px;
+}
+.trends-table th:first-child { text-align: left; }
+.trends-table td {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+  text-align: right;
+  padding: 10px 8px;
+  border-top: 1px solid var(--border);
+}
+.trends-table td:first-child { text-align: left; color: var(--muted2); font-size: 12px; }
+.trends-table tr:last-child td { /* current week */ }
+.trends-table .trend-this-week td { color: #4f8ef7; }
+.trends-table .trend-this-week td:first-child { color: #4f8ef7; }
+
+/* stats nav tab color */
+body.mode-stats .nav-btn.active         { color: #4f8ef7; border-bottom-color: #4f8ef7; }
+body.mode-stats .page-eyebrow           { color: rgba(79,142,247,.7); }
+body.mode-stats .mode-badge             { color:#4f8ef7; background:rgba(79,142,247,.08); border-color:rgba(79,142,247,.22); }
+body.mode-stats .header                 { border-bottom-color: rgba(79,142,247,0.28); }
+body.mode-stats::before                 { background: #4f8ef7; }

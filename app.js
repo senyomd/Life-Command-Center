@@ -1,10 +1,11 @@
 const MODES = {
-  home: { label: "Home" },
-  work: { label: "Work" },
-  learning: { label: "Personal Learning" },
-  class: { label: "Class" },
+  home:          { label: "Home" },
+  work:          { label: "Work" },
+  learning:      { label: "Personal Learning" },
+  class:         { label: "Class" },
   entertainment: { label: "Entertainment" },
-  finance: { label: "Finance" },
+  finance:       { label: "Finance" },
+  stats:         { label: "Stats" },
 };
 
 let currentMode = "home";
@@ -23,6 +24,8 @@ function navigateTo(mode) {
   });
   history.replaceState(null, "", "#" + mode);
   currentMode = mode;
+
+  if (mode === "stats") renderStatsPage();
 }
 
 // ── CLOCK ──
@@ -241,6 +244,271 @@ function makePomodoroUI(mode, prefix) {
   return { init, start, pause, resume, stop };
 }
 
+// ── ANALYTICS ENGINE ──
+let analyticsEngine = null;
+
+// SVG ring circumference for r=52: 2π×52 ≈ 326.73
+const RING_C = 326.73;
+
+function renderHomeDashboard() {
+  if (!analyticsEngine) return;
+  const data = analyticsEngine.getThisWeekDashboard();
+  const comp = analyticsEngine.getStatsComparison();
+  const deltas = comp.deltas;
+
+  // ── Focus score ring ──
+  const score = data.focusScore;
+  const ringFill = document.getElementById("focus-ring-fill");
+  const scoreNum = document.getElementById("focus-score-num");
+  const scoreDelta = document.getElementById("focus-score-delta");
+
+  scoreNum.textContent = score;
+  const offset = RING_C * (1 - score / 100);
+  ringFill.style.strokeDashoffset = offset;
+
+  const d = deltas.focusScore;
+  if (d !== null) {
+    scoreDelta.textContent = (d > 0 ? "+" : "") + d;
+    scoreDelta.className = "fs-delta " + (d > 0 ? "pos" : d < 0 ? "neg" : "neu");
+  } else {
+    scoreDelta.textContent = "—";
+    scoreDelta.className = "fs-delta neu";
+  }
+
+  // ── Metric cards ──
+  function setMetric(id, val, unit, delta) {
+    const card = document.getElementById(id);
+    if (!card) return;
+    const valEl = card.querySelector(".mc-val");
+    const deltaEl = card.querySelector(".mc-delta");
+
+    if (val === null) {
+      valEl.innerHTML = '<span style="color:var(--muted)">—</span>';
+    } else {
+      valEl.innerHTML = val + (unit ? `<span class="mc-unit">${unit}</span>` : "");
+    }
+
+    if (!deltaEl) return;
+    if (delta === null || delta === undefined) {
+      deltaEl.textContent = "";
+      deltaEl.className = "mc-delta";
+    } else {
+      deltaEl.textContent = (delta > 0 ? "+" : "") + delta + (unit || "");
+      deltaEl.className = "mc-delta " + (delta > 0 ? "pos" : delta < 0 ? "neg" : "neu");
+    }
+  }
+
+  // Re-render metric cards with delta rows
+  const mcRow = document.getElementById("metric-cards-row");
+  if (mcRow) {
+    mcRow.innerHTML = `
+      <div class="metric-card" id="mc-tasks">
+        <div class="mc-val">—</div>
+        <div class="mc-key">Task Execution</div>
+        <div class="mc-delta"></div>
+      </div>
+      <div class="metric-card" id="mc-habits">
+        <div class="mc-val">—</div>
+        <div class="mc-key">Habit Consistency</div>
+        <div class="mc-delta"></div>
+      </div>
+      <div class="metric-card" id="mc-focus-time">
+        <div class="mc-val">—</div>
+        <div class="mc-key">Focus Hours</div>
+        <div class="mc-delta"></div>
+      </div>
+      <div class="metric-card" id="mc-deep-work">
+        <div class="mc-val">—</div>
+        <div class="mc-key">Deep Work Ratio</div>
+        <div class="mc-delta"></div>
+      </div>`;
+  }
+
+  const te = data.taskExecution;
+  setMetric("mc-tasks",
+    te !== null ? te + "%" : null, null,
+    deltas.taskExecution !== null ? deltas.taskExecution : null);
+
+  setMetric("mc-habits",
+    data.habitConsistency + "%", null,
+    deltas.habitConsistency);
+
+  setMetric("mc-focus-time",
+    data.totalFocusTime, "h",
+    deltas.totalFocusTime);
+
+  setMetric("mc-deep-work",
+    data.deepWorkRatio + "%", null,
+    deltas.deepWorkRatio);
+
+  // ── Sparkline ──
+  const svg = document.getElementById("focus-sparkline");
+  const daysEl = document.getElementById("focus-sparkline-days");
+  if (svg && data.dailyScores) {
+    renderSparkline(svg, daysEl, data.dailyScores, analyticsEngine.getToday());
+  }
+}
+
+const DAY_ABBR = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+function renderSparkline(svg, daysEl, dailyScores, today) {
+  const W = 280, H = 60, PAD = 6;
+  const n = dailyScores.length;
+  const xStep = (W - PAD * 2) / (n - 1);
+
+  // Only use non-null scores for scale
+  const scores = dailyScores.map(d => d.score !== null ? d.score : 0);
+  const maxVal = Math.max(...scores, 1);
+
+  const pts = dailyScores.map((d, i) => {
+    const x = PAD + i * xStep;
+    const y = d.score !== null
+      ? H - PAD - ((d.score / maxVal) * (H - PAD * 2))
+      : H - PAD;
+    return { x, y, score: d.score, date: d.date };
+  });
+
+  // Build polyline path — skip future (null) segments
+  let pathD = "";
+  pts.forEach((p, i) => {
+    if (p.score === null) return;
+    if (pathD === "" || (i > 0 && pts[i - 1].score === null)) {
+      pathD += `M ${p.x} ${p.y}`;
+    } else {
+      pathD += ` L ${p.x} ${p.y}`;
+    }
+  });
+
+  // Area fill path
+  let areaD = pathD;
+  const lastNonNull = [...pts].reverse().find(p => p.score !== null);
+  const firstNonNull = pts.find(p => p.score !== null);
+  if (firstNonNull && lastNonNull) {
+    areaD += ` L ${lastNonNull.x} ${H} L ${firstNonNull.x} ${H} Z`;
+  }
+
+  svg.innerHTML = `
+    <defs>
+      <linearGradient id="spark-grad" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%"   stop-color="#4f8ef7" stop-opacity="0.22"/>
+        <stop offset="100%" stop-color="#4f8ef7" stop-opacity="0"/>
+      </linearGradient>
+    </defs>
+    ${areaD ? `<path d="${areaD}" fill="url(#spark-grad)" stroke="none"/>` : ""}
+    ${pathD  ? `<path d="${pathD}" fill="none" stroke="#4f8ef7" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>` : ""}
+    ${pts.map(p => p.score !== null
+      ? `<circle cx="${p.x}" cy="${p.y}" r="${p.date === today ? 4 : 3}"
+           fill="${p.date === today ? "#4f8ef7" : "#0d1018"}"
+           stroke="#4f8ef7" stroke-width="2"/>`
+      : ""
+    ).join("")}
+  `;
+
+  // Day labels
+  if (daysEl) {
+    daysEl.innerHTML = dailyScores.map((d, i) => {
+      const dayIdx = new Date(d.date + "T12:00:00").getDay();
+      const isToday = d.date === today;
+      return `<span class="${isToday ? "is-today" : ""}">${DAY_ABBR[dayIdx]}</span>`;
+    }).join("");
+  }
+}
+
+function renderStatsPage() {
+  if (!analyticsEngine) return;
+  const comp = analyticsEngine.getStatsComparison();
+  const trends = analyticsEngine.getMonthlyTrends();
+
+  // ── Week comparison ──
+  const compEl = document.getElementById("stats-comparison");
+  if (compEl) {
+    const tw = comp.thisWeek;
+    const lw = comp.lastWeek;
+    const dl = comp.deltas;
+
+    function fmtVal(v, unit) {
+      if (v === null) return '<span style="color:var(--muted)">—</span>';
+      return v + (unit || "");
+    }
+    function fmtDelta(d, unit) {
+      if (d === null) return '<span class="sc-delta-cell neu">—</span>';
+      const cls = d > 0 ? "pos" : d < 0 ? "neg" : "neu";
+      const prefix = d > 0 ? "+" : "";
+      return `<span class="sc-delta-cell ${cls}">${prefix}${d}${unit || ""}</span>`;
+    }
+
+    const rows = [
+      { label: "Focus Score",        tw: fmtVal(tw.focusScore, ""),    lw: fmtVal(lw.focusScore, ""),    delta: fmtDelta(dl.focusScore, "") },
+      { label: "Task Execution",     tw: fmtVal(tw.taskExecution !== null ? tw.taskExecution + "%" : null, ""), lw: fmtVal(lw.taskExecution !== null ? lw.taskExecution + "%" : null, ""), delta: fmtDelta(dl.taskExecution, "%") },
+      { label: "Habit Consistency",  tw: fmtVal(tw.habitConsistency + "%", ""), lw: fmtVal(lw.habitConsistency + "%", ""), delta: fmtDelta(dl.habitConsistency, "%") },
+      { label: "Deep Work Ratio",    tw: fmtVal(tw.deepWorkRatio + "%", ""), lw: fmtVal(lw.deepWorkRatio + "%", ""), delta: fmtDelta(dl.deepWorkRatio, "%") },
+      { label: "Focus Time",         tw: fmtVal(tw.totalFocusTime + "h", ""), lw: fmtVal(lw.totalFocusTime + "h", ""), delta: fmtDelta(dl.totalFocusTime, "h") },
+      { label: "Cognitive Quality",  tw: fmtVal(tw.cognitiveQuality + "%", ""), lw: fmtVal(lw.cognitiveQuality + "%", ""), delta: fmtDelta(dl.cognitiveQuality, "%") },
+    ];
+
+    compEl.innerHTML = `
+      <div class="stats-compare-grid">
+        <div class="sc-head">Metric</div>
+        <div class="sc-head">This Week</div>
+        <div class="sc-head">Last Week</div>
+        <div class="sc-head">Delta</div>
+        ${rows.map(r => `
+          <div class="stats-compare-row">
+            <div class="sc-metric">${r.label}</div>
+            <div class="sc-val">${r.tw}</div>
+            <div class="sc-val muted">${r.lw}</div>
+            <div>${r.delta}</div>
+          </div>`).join("")}
+      </div>`;
+  }
+
+  // ── Mode breakdown ──
+  const modeEl = document.getElementById("stats-mode-breakdown");
+  if (modeEl) {
+    const mb = analyticsEngine.getThisWeekDashboard().modeBreakdown;
+    const modeRows = [
+      { mode: "work",     label: "💼 Work",     pct: mb.work },
+      { mode: "learning", label: "🧠 Learning", pct: mb.learning },
+      { mode: "class",    label: "📚 Class",    pct: mb.class },
+    ];
+    modeEl.innerHTML = modeRows.map(r => `
+      <div class="mode-bar-row">
+        <div class="mode-bar-label">${r.label}</div>
+        <div class="mode-bar-track">
+          <div class="mode-bar-fill ${r.mode}" style="width:${r.pct}%"></div>
+        </div>
+        <div class="mode-bar-pct">${r.pct}%</div>
+      </div>`).join("");
+  }
+
+  // ── Monthly trends ──
+  const trendEl = document.getElementById("stats-monthly-trends");
+  if (trendEl) {
+    trendEl.innerHTML = `
+      <table class="trends-table">
+        <thead>
+          <tr>
+            <th>Week</th>
+            <th>Focus</th>
+            <th>Tasks</th>
+            <th>Habits</th>
+            <th>Hours</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${trends.map(w => `
+            <tr class="${w.label === "This Week" ? "trend-this-week" : ""}">
+              <td>${w.label}</td>
+              <td>${w.focusScore}</td>
+              <td>${w.taskExecution !== null ? w.taskExecution + "%" : "—"}</td>
+              <td>${w.habitConsistency}%</td>
+              <td>${w.totalFocusTime}h</td>
+            </tr>`).join("")}
+        </tbody>
+      </table>`;
+  }
+}
+
 // ── INSTANCES ──
 const pomodoroUI       = makePomodoroUI("learning", "");
 const pomodoroUI_work  = makePomodoroUI("work",     "work-");
@@ -357,6 +625,9 @@ document.addEventListener("DOMContentLoaded", () => {
   habitEngine = new HabitEngine();
   habitEngine.checkAutoHabits();
   renderHabitGrid();
+
+  analyticsEngine = new AnalyticsEngine();
+  renderHomeDashboard();
 });
 
 window.addEventListener("hashchange", () => {
