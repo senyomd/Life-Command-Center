@@ -44,6 +44,7 @@
   <button class="nav-btn"        data-mode="class"         onclick="navigateTo('class')">📚 Class</button>
   <button class="nav-btn"        data-mode="entertainment" onclick="navigateTo('entertainment')">🎬 Entertainment</button>
   <button class="nav-btn"        data-mode="finance"       onclick="navigateTo('finance')">💸 Finance</button>
+  <button class="nav-btn"        data-mode="tasks"         onclick="navigateTo('tasks')">✅ Tasks</button>
   <button class="nav-btn"        data-mode="stats"         onclick="navigateTo('stats')">📊 Stats</button>
 </nav>
 
@@ -95,6 +96,17 @@
             </div>
           </div>
         </div>
+      </div>
+    </div>
+
+    <!-- TODAY'S TASKS -->
+    <div class="card today-tasks-card">
+      <div class="card-label-row">
+        <div class="card-label">Today's Tasks</div>
+        <button class="task-quick-add-btn" onclick="openAddTaskModal()">+ Add Task</button>
+      </div>
+      <div id="today-tasks-container">
+        <p class="placeholder-text">Loading…</p>
       </div>
     </div>
 
@@ -159,6 +171,12 @@
           <label class="pomo-duration-label">Duration (minutes)</label>
           <input class="pomo-duration-input" id="work-pomo-duration" type="number" min="1" max="120" value="25" />
         </div>
+        <div class="pomo-task-row">
+          <label class="pomo-duration-label">Linked Task (optional)</label>
+          <select class="pomo-task-select" id="work-task-select">
+            <option value="">— No task —</option>
+          </select>
+        </div>
         <div class="pomo-controls">
           <button class="pomo-btn pomo-btn-start"  id="work-btn-start"  onclick="pomodoroUI_work.start()">Start</button>
           <button class="pomo-btn pomo-btn-pause"  id="work-btn-pause"  onclick="pomodoroUI_work.pause()"  style="display:none">Pause</button>
@@ -211,6 +229,13 @@
           />
         </div>
 
+        <div class="pomo-task-row">
+          <label class="pomo-duration-label">Linked Task (optional)</label>
+          <select class="pomo-task-select" id="task-select">
+            <option value="">— No task —</option>
+          </select>
+        </div>
+
         <div class="pomo-controls" id="pomo-controls">
           <button class="pomo-btn pomo-btn-start"  id="btn-start"  onclick="pomodoroUI.start()">Start</button>
           <button class="pomo-btn pomo-btn-pause"  id="btn-pause"  onclick="pomodoroUI.pause()"  style="display:none">Pause</button>
@@ -251,6 +276,12 @@
         <div class="pomo-duration-row">
           <label class="pomo-duration-label">Duration (minutes)</label>
           <input class="pomo-duration-input" id="class-pomo-duration" type="number" min="1" max="120" value="25" />
+        </div>
+        <div class="pomo-task-row">
+          <label class="pomo-duration-label">Linked Task (optional)</label>
+          <select class="pomo-task-select" id="class-task-select">
+            <option value="">— No task —</option>
+          </select>
         </div>
         <div class="pomo-controls">
           <button class="pomo-btn pomo-btn-start"  id="class-btn-start"  onclick="pomodoroUI_class.start()">Start</button>
@@ -294,6 +325,83 @@
     </div>
   </div>
 
+  <!-- TASKS -->
+  <div id="page-tasks" class="page">
+    <div class="page-header">
+      <div class="page-eyebrow">Execution</div>
+      <h1 class="page-title">Tasks</h1>
+      <p class="page-sub">Organize, prioritize, and execute your work</p>
+    </div>
+
+    <!-- Filter bar -->
+    <div class="task-filter-bar">
+      <div class="task-filter-group">
+        <span class="task-filter-label">Mode</span>
+        <button class="filter-chip active" data-filter="mode" data-value="" onclick="setTaskFilter('mode','')">All</button>
+        <button class="filter-chip" data-filter="mode" data-value="work"     onclick="setTaskFilter('mode','work')">💼 Work</button>
+        <button class="filter-chip" data-filter="mode" data-value="learning" onclick="setTaskFilter('mode','learning')">🧠 Learning</button>
+        <button class="filter-chip" data-filter="mode" data-value="class"    onclick="setTaskFilter('mode','class')">📚 Class</button>
+        <button class="filter-chip" data-filter="mode" data-value="personal" onclick="setTaskFilter('mode','personal')">👤 Personal</button>
+      </div>
+      <div class="task-filter-group">
+        <span class="task-filter-label">Priority</span>
+        <button class="filter-chip active" data-filter="priority" data-value="" onclick="setTaskFilter('priority','')">All</button>
+        <button class="filter-chip" data-filter="priority" data-value="high"   onclick="setTaskFilter('priority','high')">🔴 High</button>
+        <button class="filter-chip" data-filter="priority" data-value="medium" onclick="setTaskFilter('priority','medium')">🟡 Medium</button>
+        <button class="filter-chip" data-filter="priority" data-value="low"    onclick="setTaskFilter('priority','low')">🟢 Low</button>
+      </div>
+      <div class="task-filter-search">
+        <input type="text" id="task-search-input" class="task-search" placeholder="Search tasks…" oninput="onTaskSearch(this.value)" />
+      </div>
+      <button class="task-add-btn" onclick="openAddTaskModal()">+ New Task</button>
+    </div>
+
+    <!-- Kanban board -->
+    <div class="kanban-board" id="kanban-board">
+      <div class="kanban-col" id="kanban-todo" data-status="todo"
+           ondragover="event.preventDefault()" ondrop="onKanbanDrop(event,'todo')"
+           ondragenter="onKanbanDragEnter(event)" ondragleave="onKanbanDragLeave(event)">
+        <div class="kanban-col-header">
+          <div class="kanban-col-title-wrap">
+            <span class="kanban-col-dot todo"></span>
+            <span class="kanban-col-title">To Do</span>
+            <span class="kanban-col-count" id="kanban-count-todo">0</span>
+          </div>
+          <button class="kanban-add-btn" onclick="openAddTaskModal('todo')">+</button>
+        </div>
+        <div class="kanban-col-body" id="kanban-body-todo"></div>
+      </div>
+
+      <div class="kanban-col" id="kanban-in_progress" data-status="in_progress"
+           ondragover="event.preventDefault()" ondrop="onKanbanDrop(event,'in_progress')"
+           ondragenter="onKanbanDragEnter(event)" ondragleave="onKanbanDragLeave(event)">
+        <div class="kanban-col-header">
+          <div class="kanban-col-title-wrap">
+            <span class="kanban-col-dot in_progress"></span>
+            <span class="kanban-col-title">In Progress</span>
+            <span class="kanban-col-count" id="kanban-count-in_progress">0</span>
+          </div>
+          <button class="kanban-add-btn" onclick="openAddTaskModal('in_progress')">+</button>
+        </div>
+        <div class="kanban-col-body" id="kanban-body-in_progress"></div>
+      </div>
+
+      <div class="kanban-col" id="kanban-done" data-status="done"
+           ondragover="event.preventDefault()" ondrop="onKanbanDrop(event,'done')"
+           ondragenter="onKanbanDragEnter(event)" ondragleave="onKanbanDragLeave(event)">
+        <div class="kanban-col-header">
+          <div class="kanban-col-title-wrap">
+            <span class="kanban-col-dot done"></span>
+            <span class="kanban-col-title">Done</span>
+            <span class="kanban-col-count" id="kanban-count-done">0</span>
+          </div>
+        </div>
+        <div class="kanban-col-body" id="kanban-body-done"></div>
+        <div class="kanban-done-more" id="kanban-done-more" style="display:none"></div>
+      </div>
+    </div>
+  </div>
+
   <!-- STATS -->
   <div id="page-stats" class="page">
     <div class="page-header">
@@ -328,6 +436,101 @@
   </div>
 
 </div><!-- /main -->
+
+<!-- ── TASK DRAWER FAB ── -->
+<button class="task-drawer-fab" id="task-drawer-fab" onclick="toggleTaskDrawer()" title="Task Drawer">✅</button>
+
+<!-- ── TASK DRAWER ── -->
+<div class="task-drawer-backdrop" id="task-drawer-backdrop" onclick="closeTaskDrawer()"></div>
+<div class="task-drawer" id="task-drawer">
+  <div class="drawer-header">
+    <span class="drawer-title">Tasks</span>
+    <button class="drawer-close" onclick="closeTaskDrawer()">✕</button>
+  </div>
+
+  <div class="drawer-section">
+    <div class="drawer-section-label">Active Task</div>
+    <div id="drawer-active-task">
+      <p class="placeholder-text" style="font-size:12px;">No task in progress</p>
+    </div>
+  </div>
+
+  <div class="drawer-section">
+    <div class="drawer-section-label">Quick Add</div>
+    <div class="drawer-quick-add">
+      <input type="text" id="drawer-task-input" class="drawer-input" placeholder="Task title…" onkeydown="if(event.key==='Enter') drawerQuickAdd()" />
+      <select id="drawer-mode-select" class="drawer-select">
+        <option value="work">💼 Work</option>
+        <option value="learning" selected>🧠 Learning</option>
+        <option value="class">📚 Class</option>
+        <option value="personal">👤 Personal</option>
+      </select>
+      <button class="drawer-add-btn" onclick="drawerQuickAdd()">Add</button>
+    </div>
+  </div>
+
+  <div class="drawer-section">
+    <div class="drawer-section-label">In Progress <span id="drawer-wip-count"></span></div>
+    <div id="drawer-in-progress-list">
+      <p class="placeholder-text" style="font-size:12px;">No tasks in progress</p>
+    </div>
+  </div>
+</div>
+
+<!-- ── ADD / EDIT TASK MODAL ── -->
+<div class="modal-overlay" id="task-modal" style="display:none">
+  <div class="modal-box task-modal-box">
+    <div class="modal-title" id="task-modal-title">New Task</div>
+
+    <div class="task-form-grid">
+      <div class="task-form-group full-width">
+        <label class="task-form-label">Title *</label>
+        <input type="text" id="task-form-title" class="task-form-input" placeholder="What needs to be done?" />
+      </div>
+      <div class="task-form-group full-width">
+        <label class="task-form-label">Description</label>
+        <textarea id="task-form-desc" class="task-form-input task-form-textarea" placeholder="Notes, context, acceptance criteria…"></textarea>
+      </div>
+      <div class="task-form-group">
+        <label class="task-form-label">Mode</label>
+        <select id="task-form-mode" class="task-form-input">
+          <option value="work">💼 Work</option>
+          <option value="learning" selected>🧠 Learning</option>
+          <option value="class">📚 Class</option>
+          <option value="personal">👤 Personal</option>
+        </select>
+      </div>
+      <div class="task-form-group">
+        <label class="task-form-label">Priority</label>
+        <select id="task-form-priority" class="task-form-input">
+          <option value="high">🔴 High</option>
+          <option value="medium" selected>🟡 Medium</option>
+          <option value="low">🟢 Low</option>
+        </select>
+      </div>
+      <div class="task-form-group">
+        <label class="task-form-label">Deadline</label>
+        <input type="date" id="task-form-deadline" class="task-form-input" />
+      </div>
+      <div class="task-form-group">
+        <label class="task-form-label">Est. Pomodoros</label>
+        <input type="number" id="task-form-pomodoros" class="task-form-input" min="1" max="20" value="2" />
+      </div>
+      <div class="task-form-group full-width">
+        <label class="task-form-label">Tags (comma-separated)</label>
+        <input type="text" id="task-form-tags" class="task-form-input" placeholder="e.g. algorithms, java, networking" />
+      </div>
+    </div>
+
+    <input type="hidden" id="task-form-id" value="" />
+    <input type="hidden" id="task-form-status" value="todo" />
+
+    <div class="modal-actions">
+      <button class="modal-btn modal-btn-skip" onclick="closeTaskModal()">Cancel</button>
+      <button class="modal-btn modal-btn-save" onclick="saveTaskForm()">Save</button>
+    </div>
+  </div>
+</div>
 
 <!-- RATING MODAL -->
 <div class="modal-overlay" id="rating-modal" style="display:none">
@@ -367,6 +570,7 @@
 <script src="PomodoroEngine.js"></script>
 <script src="HabitEngine.js"></script>
 <script src="AnalyticsEngine.js"></script>
+<script src="TaskEngine.js"></script>
 <script src="app.js"></script>
 
 </body>

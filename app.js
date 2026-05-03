@@ -5,6 +5,7 @@ const MODES = {
   class:         { label: "Class" },
   entertainment: { label: "Entertainment" },
   finance:       { label: "Finance" },
+  tasks:         { label: "Tasks" },
   stats:         { label: "Stats" },
 };
 
@@ -25,7 +26,8 @@ function navigateTo(mode) {
   history.replaceState(null, "", "#" + mode);
   currentMode = mode;
 
-  if (mode === "stats") renderStatsPage();
+  if (mode === "stats")  renderStatsPage();
+  if (mode === "tasks")  renderKanban();
 }
 
 // ── CLOCK ──
@@ -69,9 +71,23 @@ function saveRating() {
 // ── POMODORO FACTORY ──
 function makePomodoroUI(mode, prefix) {
   let engine = null;
+  let linkedTaskId = null;   // task selected before this session
 
   function el(id) {
     return document.getElementById(prefix + id);
+  }
+
+  function refreshTaskSelect() {
+    if (!taskEngine) return;
+    const tasks = taskEngine.getAllTasks();
+    const optionsHtml = buildTaskSelectOptions(tasks);
+    const select = el("task-select");
+    if (!select) return;
+    const prev = select.value;
+    select.innerHTML = optionsHtml;
+    if (prev && taskEngine.getTask(prev)) select.value = prev;
+    linkedTaskId = select.value || null;
+    select.onchange = (e) => { linkedTaskId = e.target.value || null; };
   }
 
   function init() {
@@ -98,20 +114,33 @@ function makePomodoroUI(mode, prefix) {
       showButtons("running");
     };
 
-    engine.onStop = () => {
+    engine.onStop = (sid) => {
       setStatus("ready", "Ready");
       showButtons("idle");
       setInputDisabled(false);
       resetDisplay();
       renderHistory();
+      // Clear task link on stop (interrupted — don't link)
+      linkedTaskId = null;
+      const sel = el("task-select");
+      if (sel) sel.value = "";
     };
 
-    engine.onComplete = () => {
+    engine.onComplete = (sid) => {
       setStatus("complete", "Complete!");
       showButtons("idle");
       setInputDisabled(false);
       resetDisplay();
       renderHistory();
+      // Link session to task if one was selected
+      if (linkedTaskId && sid && taskEngine) {
+        taskEngine.linkSession(linkedTaskId, sid);
+        renderTodayTasks();
+        renderKanban();
+      }
+      linkedTaskId = null;
+      const sel = el("task-select");
+      if (sel) sel.value = "";
       openModal();
     };
 
@@ -125,6 +154,7 @@ function makePomodoroUI(mode, prefix) {
     }
 
     renderHistory();
+    refreshTaskSelect();
   }
 
   function start() {
@@ -197,6 +227,8 @@ function makePomodoroUI(mode, prefix) {
 
   function setInputDisabled(disabled) {
     el("pomo-duration").disabled = disabled;
+    const sel = el("task-select");
+    if (sel) sel.disabled = disabled;
   }
 
   function renderHistory() {
@@ -241,7 +273,7 @@ function makePomodoroUI(mode, prefix) {
       .join("");
   }
 
-  return { init, start, pause, resume, stop };
+  return { init, start, pause, resume, stop, refreshTaskSelect };
 }
 
 // ── ANALYTICS ENGINE ──
@@ -509,6 +541,450 @@ function renderStatsPage() {
   }
 }
 
+// ── TASK ENGINE ──
+let taskEngine = null;
+
+// ── KANBAN FILTERS ──
+let kanbanFilterMode     = "";
+let kanbanFilterPriority = "";
+let kanbanFilterQuery    = "";
+let kanbanSearchTimeout  = null;
+
+const MODE_LABELS    = { work: "💼 Work", learning: "🧠 Learning", class: "📚 Class", personal: "👤 Personal" };
+const PRIORITY_LABEL = { high: "🔴", medium: "🟡", low: "🟢" };
+
+function setTaskFilter(type, value) {
+  if (type === "mode")     kanbanFilterMode     = value;
+  if (type === "priority") kanbanFilterPriority = value;
+
+  document.querySelectorAll(`.filter-chip[data-filter="${type}"]`).forEach(btn => {
+    btn.classList.toggle("active", btn.dataset.value === value);
+  });
+  renderKanban();
+}
+
+function onTaskSearch(value) {
+  clearTimeout(kanbanSearchTimeout);
+  kanbanSearchTimeout = setTimeout(() => {
+    kanbanFilterQuery = value;
+    renderKanban();
+  }, 150);
+}
+
+// ── TODAY'S TASKS ──
+
+function renderTodayTasks() {
+  const container = document.getElementById("today-tasks-container");
+  if (!container || !taskEngine) return;
+
+  const { inProgress, overdue, dueToday, createdToday } = taskEngine.getTodayTasks();
+  const total = inProgress.length + overdue.length + dueToday.length + createdToday.length;
+
+  if (total === 0) {
+    container.innerHTML = `<div class="today-tasks-empty">No tasks for today — <a href="#" onclick="openAddTaskModal(); return false;" style="color:#4f8ef7;text-decoration:none;font-weight:700;">add one</a></div>`;
+    return;
+  }
+
+  let html = "";
+
+  function renderSection(tasks, cls, label) {
+    if (tasks.length === 0) return;
+    html += `<div class="today-section-label ${cls}">${label}</div>`;
+    tasks.forEach(t => {
+      const today = taskEngine.getToday();
+      let deadlineHtml = "";
+      if (t.deadline) {
+        const cls2 = t.deadline < today ? "overdue" : t.deadline === today ? "due-today" : "upcoming";
+        const label2 = t.deadline < today ? `Due ${t.deadline}` : t.deadline === today ? "Due today" : t.deadline;
+        deadlineHtml = `<span class="task-deadline-chip ${cls2}">${label2}</span>`;
+      }
+      const isInProgress = t.status === "in_progress";
+      html += `<div class="today-task-row">
+        <span class="task-priority-dot ${t.priority}"></span>
+        <span class="task-row-title">${escHtml(t.title)}</span>
+        <span class="task-mode-chip ${t.mode}">${t.mode}</span>
+        ${deadlineHtml}
+        <div class="task-row-actions">
+          ${!isInProgress ? `<button class="task-row-btn start" onclick="quickStartTask('${t.id}')">Start</button>` : ""}
+          <button class="task-row-btn done" onclick="quickDoneTask('${t.id}')">Done</button>
+        </div>
+      </div>`;
+    });
+  }
+
+  renderSection(inProgress, "in-progress",   "▶ In Progress");
+  renderSection(overdue,    "overdue",        "⚠ Overdue");
+  renderSection(dueToday,   "due-today",      "📅 Due Today");
+  renderSection(createdToday, "created-today","✨ Added Today");
+
+  container.innerHTML = html;
+}
+
+function quickStartTask(id) {
+  taskEngine.setStatus(id, "in_progress");
+  renderTodayTasks();
+  renderKanban();
+  refreshAllPomodoroTaskSelects();
+}
+
+function quickDoneTask(id) {
+  taskEngine.setStatus(id, "done");
+  renderTodayTasks();
+  renderKanban();
+  renderDrawer();
+  refreshAllPomodoroTaskSelects();
+}
+
+// ── KANBAN BOARD ──
+
+function renderKanban() {
+  if (!taskEngine) return;
+
+  const filters = {
+    mode:     kanbanFilterMode     || undefined,
+    priority: kanbanFilterPriority || undefined,
+    query:    kanbanFilterQuery    || undefined,
+  };
+  const { todo, in_progress, done, doneTotal } = taskEngine.getKanbanColumns(filters);
+
+  renderKanbanColumn("todo",        todo,        "kanban-count-todo");
+  renderKanbanColumn("in_progress", in_progress, "kanban-count-in_progress");
+  renderKanbanColumn("done",        done,        "kanban-count-done");
+
+  const moreEl = document.getElementById("kanban-done-more");
+  if (moreEl) {
+    const extra = doneTotal - done.length;
+    if (extra > 0) {
+      moreEl.textContent = `${extra} more completed`;
+      moreEl.style.display = "";
+    } else {
+      moreEl.style.display = "none";
+    }
+  }
+}
+
+function renderKanbanColumn(status, tasks, countId) {
+  const body  = document.getElementById(`kanban-body-${status}`);
+  const count = document.getElementById(countId);
+  if (!body) return;
+  if (count) count.textContent = tasks.length;
+
+  if (tasks.length === 0) {
+    body.innerHTML = `<p class="placeholder-text" style="font-size:12px;padding:8px 4px;">No tasks here</p>`;
+    return;
+  }
+
+  body.innerHTML = tasks.map(t => buildTaskCard(t)).join("");
+
+  // Attach drag handlers
+  body.querySelectorAll(".task-card").forEach(card => {
+    card.addEventListener("dragstart", onCardDragStart);
+    card.addEventListener("dragend",   onCardDragEnd);
+  });
+}
+
+function buildTaskCard(t) {
+  const today = taskEngine ? taskEngine.getToday() : "";
+  let deadlineHtml = "";
+  if (t.deadline) {
+    const cls = t.deadline < today ? "overdue" : t.deadline === today ? "due-today" : "upcoming";
+    const label = t.deadline < today
+      ? `⚠ ${t.deadline}`
+      : t.deadline === today ? "📅 Today"
+      : `📅 ${t.deadline}`;
+    deadlineHtml = `<span class="task-deadline-chip ${cls}">${label}</span>`;
+  }
+
+  const sessions = t.linkedSessions.length;
+  const sessionChip = sessions > 0
+    ? `<span class="task-card-pomodoros">🍅 ${sessions}/${t.estimatedPomodoros}</span>`
+    : `<span class="task-card-pomodoros">🍅 0/${t.estimatedPomodoros}</span>`;
+
+  const isDone = t.status === "done";
+  const isInProgress = t.status === "in_progress";
+
+  let actions = "";
+  if (!isDone) {
+    if (!isInProgress) actions += `<button class="task-card-btn btn-start" onclick="event.stopPropagation();kanbanSetStatus('${t.id}','in_progress')">Start</button>`;
+    actions += `<button class="task-card-btn btn-done" onclick="event.stopPropagation();kanbanSetStatus('${t.id}','done')">Done ✓</button>`;
+  } else {
+    actions += `<button class="task-card-btn" onclick="event.stopPropagation();kanbanSetStatus('${t.id}','todo')">↩ Todo</button>`;
+    actions += `<button class="task-card-btn btn-done" onclick="event.stopPropagation();kanbanSetStatus('${t.id}','done')">Done ✓</button>`;
+  }
+  actions += `<button class="task-card-btn btn-edit" onclick="event.stopPropagation();openEditTaskModal('${t.id}')">✎</button>`;
+  actions += `<button class="task-card-btn btn-delete" onclick="event.stopPropagation();deleteTask('${t.id}')">✕</button>`;
+
+  return `<div class="task-card mode-${t.mode}" draggable="true" data-task-id="${t.id}">
+    <div class="task-card-top">
+      <div class="task-card-title">${escHtml(t.title)}</div>
+      <span class="task-priority-dot ${t.priority}" style="flex-shrink:0;margin-top:3px;"></span>
+    </div>
+    <div class="task-card-meta">
+      <span class="task-mode-chip ${t.mode}">${t.mode}</span>
+      ${deadlineHtml}
+      ${sessionChip}
+    </div>
+    <div class="task-card-actions">${actions}</div>
+  </div>`;
+}
+
+function kanbanSetStatus(id, status) {
+  taskEngine.setStatus(id, status);
+  renderKanban();
+  renderTodayTasks();
+  renderDrawer();
+  refreshAllPomodoroTaskSelects();
+}
+
+function deleteTask(id) {
+  taskEngine.deleteTask(id);
+  renderKanban();
+  renderTodayTasks();
+  renderDrawer();
+  refreshAllPomodoroTaskSelects();
+}
+
+// ── DRAG AND DROP ──
+let draggingTaskId = null;
+
+function onCardDragStart(e) {
+  draggingTaskId = e.currentTarget.dataset.taskId;
+  e.currentTarget.classList.add("dragging");
+  e.dataTransfer.setData("text/plain", draggingTaskId);
+  e.dataTransfer.effectAllowed = "move";
+}
+
+function onCardDragEnd(e) {
+  e.currentTarget.classList.remove("dragging");
+  document.querySelectorAll(".kanban-col.drag-over")
+    .forEach(c => c.classList.remove("drag-over"));
+}
+
+function onKanbanDragEnter(e) {
+  e.currentTarget.closest(".kanban-col").classList.add("drag-over");
+}
+
+function onKanbanDragLeave(e) {
+  // Only remove if leaving the column entirely (not entering a child)
+  if (!e.currentTarget.closest(".kanban-col").contains(e.relatedTarget)) {
+    e.currentTarget.closest(".kanban-col").classList.remove("drag-over");
+  }
+}
+
+function onKanbanDrop(e, newStatus) {
+  e.preventDefault();
+  const id = e.dataTransfer.getData("text/plain") || draggingTaskId;
+  if (id) {
+    taskEngine.setStatus(id, newStatus);
+    renderKanban();
+    renderTodayTasks();
+    renderDrawer();
+    refreshAllPomodoroTaskSelects();
+  }
+  e.currentTarget.closest(".kanban-col").classList.remove("drag-over");
+}
+
+// ── TASK MODAL ──
+function openAddTaskModal(defaultStatus = "todo") {
+  const modal = document.getElementById("task-modal");
+  if (!modal) return;
+  document.getElementById("task-modal-title").textContent = "New Task";
+  document.getElementById("task-form-id").value = "";
+  document.getElementById("task-form-status").value = defaultStatus;
+  document.getElementById("task-form-title").value = "";
+  document.getElementById("task-form-desc").value = "";
+  document.getElementById("task-form-mode").value = "learning";
+  document.getElementById("task-form-priority").value = "medium";
+  document.getElementById("task-form-deadline").value = "";
+  document.getElementById("task-form-pomodoros").value = "2";
+  document.getElementById("task-form-tags").value = "";
+
+  // Default mode to current page mode if valid
+  const validModes = ["work", "learning", "class", "personal"];
+  if (validModes.includes(currentMode)) {
+    document.getElementById("task-form-mode").value = currentMode;
+  }
+
+  modal.style.display = "flex";
+  setTimeout(() => document.getElementById("task-form-title").focus(), 50);
+}
+
+function openEditTaskModal(id) {
+  const t = taskEngine.getTask(id);
+  if (!t) return;
+  const modal = document.getElementById("task-modal");
+  document.getElementById("task-modal-title").textContent = "Edit Task";
+  document.getElementById("task-form-id").value = t.id;
+  document.getElementById("task-form-status").value = t.status;
+  document.getElementById("task-form-title").value = t.title;
+  document.getElementById("task-form-desc").value = t.description || "";
+  document.getElementById("task-form-mode").value = t.mode;
+  document.getElementById("task-form-priority").value = t.priority;
+  document.getElementById("task-form-deadline").value = t.deadline || "";
+  document.getElementById("task-form-pomodoros").value = t.estimatedPomodoros || 2;
+  document.getElementById("task-form-tags").value = (t.tags || []).join(", ");
+  modal.style.display = "flex";
+}
+
+function closeTaskModal() {
+  const modal = document.getElementById("task-modal");
+  if (modal) modal.style.display = "none";
+}
+
+function saveTaskForm() {
+  const title = document.getElementById("task-form-title").value.trim();
+  if (!title) {
+    document.getElementById("task-form-title").focus();
+    return;
+  }
+  const id = document.getElementById("task-form-id").value;
+  const status = document.getElementById("task-form-status").value;
+  const fields = {
+    title,
+    description: document.getElementById("task-form-desc").value,
+    mode:        document.getElementById("task-form-mode").value,
+    priority:    document.getElementById("task-form-priority").value,
+    deadline:    document.getElementById("task-form-deadline").value || null,
+    estimatedPomodoros: parseInt(document.getElementById("task-form-pomodoros").value) || 2,
+    tags: document.getElementById("task-form-tags").value
+      .split(",").map(s => s.trim()).filter(Boolean),
+  };
+
+  if (id) {
+    taskEngine.updateTask(id, fields);
+  } else {
+    const t = taskEngine.createTask(fields);
+    if (status !== "todo") taskEngine.setStatus(t.id, status);
+  }
+
+  closeTaskModal();
+  renderKanban();
+  renderTodayTasks();
+  renderDrawer();
+  refreshAllPomodoroTaskSelects();
+}
+
+// ── TASK DRAWER ──
+let drawerOpen = false;
+
+function toggleTaskDrawer() {
+  drawerOpen ? closeTaskDrawer() : openTaskDrawer();
+}
+
+function openTaskDrawer() {
+  drawerOpen = true;
+  const mode = currentMode;
+  const validModes = ["work", "learning", "class", "personal"];
+  const modeSelect = document.getElementById("drawer-mode-select");
+  if (modeSelect && validModes.includes(mode)) modeSelect.value = mode;
+
+  document.getElementById("task-drawer").classList.add("open");
+  document.getElementById("task-drawer-backdrop").classList.add("open");
+  renderDrawer();
+}
+
+function closeTaskDrawer() {
+  drawerOpen = false;
+  document.getElementById("task-drawer").classList.remove("open");
+  document.getElementById("task-drawer-backdrop").classList.remove("open");
+}
+
+function renderDrawer() {
+  if (!taskEngine) return;
+
+  // Active task
+  const activeEl = document.getElementById("drawer-active-task");
+  const inProgress = taskEngine.getTasksByStatus("in_progress");
+  if (activeEl) {
+    if (inProgress.length === 0) {
+      activeEl.innerHTML = `<p class="placeholder-text" style="font-size:12px;">No task in progress</p>`;
+    } else {
+      const t = inProgress[0];
+      activeEl.innerHTML = `<div class="drawer-task-item">
+        <span class="task-priority-dot ${t.priority}"></span>
+        <span class="task-mode-chip ${t.mode}" style="font-size:8px;">${t.mode}</span>
+        <span class="drawer-task-name">${escHtml(t.title)}</span>
+        <button class="drawer-task-done-btn" onclick="quickDoneTask('${t.id}')">Done ✓</button>
+      </div>`;
+    }
+  }
+
+  // WIP list
+  const wipEl = document.getElementById("drawer-in-progress-list");
+  const wipCount = document.getElementById("drawer-wip-count");
+  if (wipEl) {
+    if (wipCount) wipCount.textContent = inProgress.length > 0 ? `(${inProgress.length})` : "";
+    if (inProgress.length === 0) {
+      wipEl.innerHTML = `<p class="placeholder-text" style="font-size:12px;">No tasks in progress</p>`;
+    } else {
+      wipEl.innerHTML = inProgress.map(t => `
+        <div class="drawer-task-item">
+          <span class="task-priority-dot ${t.priority}"></span>
+          <span class="drawer-task-name">${escHtml(t.title)}</span>
+          <button class="drawer-task-done-btn" onclick="quickDoneTask('${t.id}')">✓</button>
+        </div>`).join("");
+    }
+  }
+}
+
+function drawerQuickAdd() {
+  const input = document.getElementById("drawer-task-input");
+  const modeSelect = document.getElementById("drawer-mode-select");
+  const title = input ? input.value.trim() : "";
+  if (!title) return;
+
+  taskEngine.createTask({
+    title,
+    mode: modeSelect ? modeSelect.value : "learning",
+  });
+
+  if (input) input.value = "";
+  renderTodayTasks();
+  renderKanban();
+  renderDrawer();
+  refreshAllPomodoroTaskSelects();
+}
+
+// ── POMODORO TASK SELECT HELPERS ──
+
+function buildTaskSelectOptions(tasks) {
+  const inProgress = tasks.filter(t => t.status === "in_progress");
+  const todo       = tasks.filter(t => t.status === "todo");
+  let html = `<option value="">— No task —</option>`;
+  if (inProgress.length > 0) {
+    html += `<optgroup label="In Progress">`;
+    inProgress.forEach(t => {
+      html += `<option value="${t.id}">${escHtml(t.title)}</option>`;
+    });
+    html += `</optgroup>`;
+  }
+  if (todo.length > 0) {
+    html += `<optgroup label="To Do">`;
+    todo.forEach(t => {
+      html += `<option value="${t.id}">${escHtml(t.title)}</option>`;
+    });
+    html += `</optgroup>`;
+  }
+  return html;
+}
+
+function refreshAllPomodoroTaskSelects() {
+  if (!taskEngine) return;
+  // Each factory has its own refreshTaskSelect that preserves linkedTaskId state
+  [pomodoroUI, pomodoroUI_work, pomodoroUI_class].forEach(ui => {
+    if (ui && ui.refreshTaskSelect) ui.refreshTaskSelect();
+  });
+}
+
+// ── UTILITY ──
+function escHtml(str) {
+  return String(str)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
 // ── INSTANCES ──
 const pomodoroUI       = makePomodoroUI("learning", "");
 const pomodoroUI_work  = makePomodoroUI("work",     "work-");
@@ -627,10 +1103,20 @@ document.addEventListener("DOMContentLoaded", () => {
   renderHabitGrid();
 
   analyticsEngine = new AnalyticsEngine();
+  taskEngine = new TaskEngine();
   renderHomeDashboard();
+  renderTodayTasks();
+  refreshAllPomodoroTaskSelects();
 });
 
 window.addEventListener("hashchange", () => {
   const hash = window.location.hash.slice(1);
   if (hash !== currentMode) navigateTo(hash);
+});
+
+window.addEventListener("keydown", (e) => {
+  if (e.key === "Escape") {
+    closeTaskModal();
+    closeTaskDrawer();
+  }
 });
