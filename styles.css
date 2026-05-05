@@ -1269,6 +1269,11 @@ body.mode-tasks::before                 { background: #4f8ef7; }
   color: var(--muted);
   font-weight: 600;
 }
+.task-card-time {
+  font-size: 10px;
+  color: var(--muted2);
+  font-weight: 600;
+}
 
 .task-card-actions {
   display: flex;

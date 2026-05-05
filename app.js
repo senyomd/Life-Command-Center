@@ -609,11 +609,18 @@ function renderTodayTasks() {
         deadlineHtml = `<span class="task-deadline-chip ${cls2}">${label2}</span>`;
       }
       const isInProgress = t.status === "in_progress";
+      let timeSpentHtml = "";
+      if (t.linkedSessions.length > 0 && taskEngine) {
+        const stats = taskEngine.getPerTaskStats(t.id);
+        const formatted = formatTimeSpent(stats.totalMinutes);
+        if (formatted) timeSpentHtml = `<span class="task-deadline-chip upcoming">⏱ ${formatted}</span>`;
+      }
       html += `<div class="today-task-row">
         <span class="task-priority-dot ${t.priority}"></span>
         <span class="task-row-title">${escHtml(t.title)}</span>
         <span class="task-mode-chip ${t.mode}">${t.mode}</span>
         ${deadlineHtml}
+        ${timeSpentHtml}
         <div class="task-row-actions">
           ${!isInProgress
             ? `<button class="task-row-btn start" onclick="quickStartTask('${t.id}')">▶ Start</button>`
@@ -708,9 +715,14 @@ function buildTaskCard(t) {
   }
 
   const sessions = t.linkedSessions.length;
-  const sessionChip = sessions > 0
-    ? `<span class="task-card-pomodoros">🍅 ${sessions}/${t.estimatedPomodoros}</span>`
-    : `<span class="task-card-pomodoros">🍅 0/${t.estimatedPomodoros}</span>`;
+  const sessionChip = `<span class="task-card-pomodoros">🍅 ${sessions}/${t.estimatedPomodoros}</span>`;
+
+  let timeChip = "";
+  if (sessions > 0 && taskEngine) {
+    const stats = taskEngine.getPerTaskStats(t.id);
+    const formatted = formatTimeSpent(stats.totalMinutes);
+    if (formatted) timeChip = `<span class="task-card-time">⏱ ${formatted}</span>`;
+  }
 
   const isDone = t.status === "done";
   const isInProgress = t.status === "in_progress";
@@ -737,6 +749,7 @@ function buildTaskCard(t) {
       <span class="task-mode-chip ${t.mode}">${t.mode}</span>
       ${deadlineHtml}
       ${sessionChip}
+      ${timeChip}
     </div>
     <div class="task-card-actions">${actions}</div>
   </div>`;
@@ -992,6 +1005,16 @@ function refreshAllPomodoroTaskSelects() {
 }
 
 // ── UTILITY ──
+
+/** Format minutes as "1h 25m", "45m", etc. Returns null if 0. */
+function formatTimeSpent(minutes) {
+  if (!minutes || minutes <= 0) return null;
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  if (h === 0) return `${m}m`;
+  return m > 0 ? `${h}h ${m}m` : `${h}h`;
+}
+
 function escHtml(str) {
   return String(str)
     .replace(/&/g, "&amp;")
