@@ -76,6 +76,12 @@ function seedSessions(mode, sessions) {
   localStorage.setItem(`pomodoro_sessions_${mode}`, JSON.stringify(sessions));
 }
 
+/** Properly transitions a task to done via in_progress (mirrors the engine state rule) */
+function setDone(e, id) {
+  e.setStatus(id, 'in_progress');
+  e.setStatus(id, 'done');
+}
+
 function makeSession(date, overrides = {}) {
   return {
     id: overrides.id || Math.random().toString(36).slice(2),
@@ -314,9 +320,10 @@ test('in_progress → todo succeeds and completedAt stays null', () => {
   eq(task.completedAt, null);
 });
 
-test('→ done sets completedAt to today', () => {
+test('in_progress → done sets completedAt to today', () => {
   const e = fresh();
   const t = e.createTask({ title: 'T' });
+  e.setStatus(t.id, 'in_progress');
   e.setStatus(t.id, 'done');
   eq(e.getTask(t.id).completedAt, todayStr());
 });
@@ -324,17 +331,29 @@ test('→ done sets completedAt to today', () => {
 test('done → todo clears completedAt to null', () => {
   const e = fresh();
   const t = e.createTask({ title: 'T' });
+  e.setStatus(t.id, 'in_progress');
   e.setStatus(t.id, 'done');
   e.setStatus(t.id, 'todo');
   eq(e.getTask(t.id).completedAt, null);
 });
 
-test('in_progress → done sets completedAt', () => {
+test('todo → done is blocked (returns null)', () => {
+  const e = fresh();
+  const t = e.createTask({ title: 'T' });
+  const result = e.setStatus(t.id, 'done');
+  eq(result, null, 'todo → done should be blocked');
+  eq(e.getTask(t.id).status, 'todo', 'status should remain todo');
+  eq(e.getTask(t.id).completedAt, null);
+});
+
+test('done → in_progress is allowed (reopen to active)', () => {
   const e = fresh();
   const t = e.createTask({ title: 'T' });
   e.setStatus(t.id, 'in_progress');
   e.setStatus(t.id, 'done');
-  eq(e.getTask(t.id).completedAt, todayStr());
+  e.setStatus(t.id, 'in_progress');
+  eq(e.getTask(t.id).status, 'in_progress');
+  eq(e.getTask(t.id).completedAt, null);
 });
 
 test('setStatus returns null for unknown id', () => {
@@ -459,7 +478,7 @@ test('todo task created today with no deadline appears in createdToday bucket', 
 test('done task does not appear in any bucket', () => {
   const e = fresh();
   const t = e.createTask({ title: 'Done Task', deadline: todayStr() });
-  e.setStatus(t.id, 'done');
+  setDone(e, t.id);
   const { inProgress, overdue, dueToday, createdToday } = e.getTodayTasks();
   const all = [...inProgress, ...overdue, ...dueToday, ...createdToday];
   assert(!all.some(x => x.id === t.id), 'done task should not appear in any bucket');
@@ -515,7 +534,7 @@ test('tasks appear in correct columns by status', () => {
   const t2 = e.createTask({ title: 'WIP' });
   const t3 = e.createTask({ title: 'Done' });
   e.setStatus(t2.id, 'in_progress');
-  e.setStatus(t3.id, 'done');
+  setDone(e, t3.id);
   const cols = e.getKanbanColumns();
   eq(cols.todo.length, 1);
   eq(cols.in_progress.length, 1);
@@ -527,7 +546,7 @@ test('done column capped at DONE_LIMIT entries', () => {
   const limit = TaskEngine.DONE_LIMIT;
   for (let i = 0; i < limit + 5; i++) {
     const t = e.createTask({ title: `Task ${i}` });
-    e.setStatus(t.id, 'done');
+    setDone(e, t.id);
   }
   const { done, doneTotal } = e.getKanbanColumns();
   eq(done.length, limit, `done should be capped at ${limit}`);
@@ -537,11 +556,11 @@ test('done column capped at DONE_LIMIT entries', () => {
 test('done column sorted completedAt descending (newest first)', () => {
   const e = fresh();
   const t1 = e.createTask({ title: 'First Done' });
-  e.setStatus(t1.id, 'done');
+  setDone(e, t1.id);
   e.tasks[0].completedAt = dateOffset(-3);
 
   const t2 = e.createTask({ title: 'Last Done' });
-  e.setStatus(t2.id, 'done');
+  setDone(e, t2.id);
   e.tasks[1].completedAt = todayStr();
   e.saveState();
 
@@ -590,7 +609,7 @@ test('getCompletionRate() returns null with no tasks', () => {
 test('getCompletionRate() returns 100 when all done', () => {
   const e = fresh();
   const t = e.createTask({ title: 'T' });
-  e.setStatus(t.id, 'done');
+  setDone(e, t.id);
   eq(e.getCompletionRate(), 100);
 });
 
@@ -605,7 +624,7 @@ test('getCompletionRate() with mode filter only counts matching tasks', () => {
   const e = fresh();
   const t1 = e.createTask({ title: 'Work', mode: 'work' });
   const t2 = e.createTask({ title: 'Learn', mode: 'learning' });
-  e.setStatus(t1.id, 'done');
+  setDone(e, t1.id);
   // work: 1/1 = 100%; learning: 0/1 = 0%
   eq(e.getCompletionRate({ mode: 'work' }), 100);
   eq(e.getCompletionRate({ mode: 'learning' }), 0);
@@ -615,7 +634,7 @@ test('getCompletionRate() with sinceDate filters by createdAt', () => {
   const e = fresh();
   const t1 = e.createTask({ title: 'Old' });
   e.tasks[0].createdAt = dateOffset(-10);
-  e.setStatus(t1.id, 'done');
+  setDone(e, t1.id);
   const t2 = e.createTask({ title: 'New' }); // created today, not done
   e.saveState();
 
@@ -634,7 +653,7 @@ test('getModeBreakdown() only counts done tasks', () => {
   const e = fresh();
   const t1 = e.createTask({ title: 'Work done', mode: 'work' });
   e.createTask({ title: 'Work todo', mode: 'work' });
-  e.setStatus(t1.id, 'done');
+  setDone(e, t1.id);
   const bd = e.getModeBreakdown();
   eq(bd.work, 1);
 });
@@ -652,7 +671,7 @@ test('getPriorityExecution() calculates per-priority completion rate', () => {
   const e = fresh();
   const h1 = e.createTask({ title: 'H1', priority: 'high' });
   const h2 = e.createTask({ title: 'H2', priority: 'high' });
-  e.setStatus(h1.id, 'done');
+  setDone(e, h1.id);
   const pe = e.getPriorityExecution();
   eq(pe.high, 50);
 });
@@ -660,12 +679,12 @@ test('getPriorityExecution() calculates per-priority completion rate', () => {
 test('getDeadlinePerformance() counts on-time vs late', () => {
   const e = fresh();
   const t1 = e.createTask({ title: 'On Time', deadline: dateOffset(1) });
-  e.setStatus(t1.id, 'done');
+  setDone(e, t1.id);
   e.tasks[0].completedAt = todayStr(); // completedAt < deadline → on time
   e.saveState();
 
   const t2 = e.createTask({ title: 'Late', deadline: dateOffset(-1) });
-  e.setStatus(t2.id, 'done');
+  setDone(e, t2.id);
   e.tasks[1].completedAt = todayStr(); // completedAt > deadline → late
   e.saveState();
 
@@ -678,7 +697,7 @@ test('getDeadlinePerformance() counts on-time vs late', () => {
 test('getDeadlinePerformance() treats no-deadline tasks in noDeadline', () => {
   const e = fresh();
   const t = e.createTask({ title: 'No DL' });
-  e.setStatus(t.id, 'done');
+  setDone(e, t.id);
   const dp = e.getDeadlinePerformance();
   eq(dp.noDeadline, 1);
   eq(dp.onTimeRate, null, 'onTimeRate null when no deadlined completions');
@@ -745,7 +764,7 @@ test('getWeeklyStats() with provided weekDates uses those dates', () => {
   // Manually plant a task in last week
   const t = e.createTask({ title: 'Last week task' });
   e.tasks[0].createdAt = dateOffset(-7);
-  e.setStatus(t.id, 'done');
+  setDone(e, t.id);
   e.saveState();
 
   const lastWeekStart = dateOffset(-7);
@@ -810,7 +829,7 @@ test('getTasksByStatus() returns only matching tasks', () => {
   const e = fresh();
   const t1 = e.createTask({ title: 'Todo' });
   const t2 = e.createTask({ title: 'Done' });
-  e.setStatus(t2.id, 'done');
+  setDone(e, t2.id);
   const todos = e.getTasksByStatus('todo');
   eq(todos.length, 1);
   eq(todos[0].id, t1.id);

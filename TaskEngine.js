@@ -129,7 +129,13 @@ class TaskEngine {
   // ── STATUS TRANSITIONS ────────────────────────────────────────────────────
 
   /**
-   * Valid transitions: any status → any other status.
+   * Status transitions with one restriction: todo → done is not allowed.
+   * A task must be in_progress before it can be marked done.
+   *
+   * Valid: todo→in_progress, in_progress→done, in_progress→todo,
+   *        done→todo, done→in_progress
+   * Blocked: todo→done (returns null)
+   *
    * Automatically manages completedAt:
    * - → done:     sets completedAt to today
    * - → non-done: clears completedAt to null
@@ -138,6 +144,9 @@ class TaskEngine {
     if (!TaskEngine.VALID_STATUS.includes(status)) return null;
     const task = this.tasks.find(t => t.id === id);
     if (!task) return null;
+
+    // Block todo → done: work must be started before it can be completed
+    if (task.status === 'todo' && status === 'done') return null;
 
     task.status = status;
     task.completedAt = status === 'done' ? this.getToday() : null;

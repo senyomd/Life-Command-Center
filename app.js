@@ -98,10 +98,20 @@ function makePomodoroUI(mode, prefix) {
       updateProgress(remaining, engine.duration);
     };
 
-    engine.onStart = () => {
+    engine.onStart = (sid) => {
       setStatus("running", "Running");
       showButtons("running");
       setInputDisabled(true);
+      // Auto-advance todo → in_progress and pre-link session on start
+      if (linkedTaskId && taskEngine) {
+        const t = taskEngine.getTask(linkedTaskId);
+        if (t && t.status === "todo") {
+          taskEngine.setStatus(linkedTaskId, "in_progress");
+        }
+        taskEngine.linkSession(linkedTaskId, sid);
+        renderTodayTasks();
+        renderKanban();
+      }
     };
 
     engine.onPause = () => {
@@ -605,8 +615,10 @@ function renderTodayTasks() {
         <span class="task-mode-chip ${t.mode}">${t.mode}</span>
         ${deadlineHtml}
         <div class="task-row-actions">
-          ${!isInProgress ? `<button class="task-row-btn start" onclick="quickStartTask('${t.id}')">Start</button>` : ""}
-          <button class="task-row-btn done" onclick="quickDoneTask('${t.id}')">Done</button>
+          ${!isInProgress
+            ? `<button class="task-row-btn start" onclick="quickStartTask('${t.id}')">▶ Start</button>`
+            : `<button class="task-row-btn done" onclick="quickDoneTask('${t.id}')">Done ✓</button>`
+          }
         </div>
       </div>`;
     });
@@ -704,12 +716,14 @@ function buildTaskCard(t) {
   const isInProgress = t.status === "in_progress";
 
   let actions = "";
-  if (!isDone) {
-    if (!isInProgress) actions += `<button class="task-card-btn btn-start" onclick="event.stopPropagation();kanbanSetStatus('${t.id}','in_progress')">Start</button>`;
+  if (isDone) {
+    actions += `<button class="task-card-btn" onclick="event.stopPropagation();kanbanSetStatus('${t.id}','todo')">↩ Reopen</button>`;
+  } else if (isInProgress) {
     actions += `<button class="task-card-btn btn-done" onclick="event.stopPropagation();kanbanSetStatus('${t.id}','done')">Done ✓</button>`;
-  } else {
     actions += `<button class="task-card-btn" onclick="event.stopPropagation();kanbanSetStatus('${t.id}','todo')">↩ Todo</button>`;
-    actions += `<button class="task-card-btn btn-done" onclick="event.stopPropagation();kanbanSetStatus('${t.id}','done')">Done ✓</button>`;
+  } else {
+    // todo: only Start is available — done requires going through in_progress
+    actions += `<button class="task-card-btn btn-start" onclick="event.stopPropagation();kanbanSetStatus('${t.id}','in_progress')">▶ Start</button>`;
   }
   actions += `<button class="task-card-btn btn-edit" onclick="event.stopPropagation();openEditTaskModal('${t.id}')">✎</button>`;
   actions += `<button class="task-card-btn btn-delete" onclick="event.stopPropagation();deleteTask('${t.id}')">✕</button>`;
@@ -729,7 +743,8 @@ function buildTaskCard(t) {
 }
 
 function kanbanSetStatus(id, status) {
-  taskEngine.setStatus(id, status);
+  const result = taskEngine.setStatus(id, status);
+  if (!result) return; // blocked transition (e.g. todo → done)
   renderKanban();
   renderTodayTasks();
   renderDrawer();
