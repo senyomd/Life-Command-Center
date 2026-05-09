@@ -1534,3 +1534,491 @@ body.mode-class    .pomo-task-select:focus { border-color: rgba(168,85,247,.5); 
 }
 select.task-form-input { cursor: pointer; }
 input[type=date].task-form-input { cursor: pointer; color-scheme: dark; }
+
+/* ══════════════════════════════════════════════════════════════════
+   UI POLISH — animations · shadows · typography · focus · spacing
+   ══════════════════════════════════════════════════════════════════ */
+
+/* ── DESIGN TOKEN ADDITIONS ── */
+:root {
+  --shadow-xs:  0 1px 2px rgba(0,0,0,.45);
+  --shadow-sm:  0 2px 6px rgba(0,0,0,.45), 0 1px 2px rgba(0,0,0,.3);
+  --shadow-md:  0 6px 20px rgba(0,0,0,.5),  0 2px 6px rgba(0,0,0,.35);
+  --shadow-lg:  0 12px 40px rgba(0,0,0,.6), 0 4px 12px rgba(0,0,0,.4);
+  --ease:       cubic-bezier(0.4, 0.0, 0.2, 1);
+  --ease-out:   cubic-bezier(0.0, 0.0, 0.2, 1);
+  --t-fast:     150ms var(--ease);
+  --t-base:     200ms var(--ease);
+  --t-slow:     300ms var(--ease);
+  --muted-aa:   #8899b4;   /* WCAG AA on --bg (#07090f), ~5.1:1 contrast */
+}
+
+/* ── BASE BODY ── */
+body { line-height: 1.5; }
+
+/* ── TEXT SELECTION ── */
+::selection { background: rgba(79,142,247,.28); color: var(--text); }
+
+/* ── SCROLLBAR GLOBAL ── */
+* { scrollbar-width: thin; scrollbar-color: var(--border2) transparent; }
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--muted); }
+
+/* ── PAGE TRANSITION ── */
+.page.active {
+  animation: pageIn 0.28s var(--ease-out);
+}
+@keyframes pageIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── CARD SHADOWS & HOVER LIFT ── */
+.card {
+  box-shadow: var(--shadow-xs);
+  transition: box-shadow var(--t-base), border-color var(--t-base);
+}
+.card:hover { box-shadow: var(--shadow-sm); }
+
+.mode-card {
+  box-shadow: var(--shadow-xs);
+  transition: border-color 0.2s, transform 0.2s, box-shadow 0.2s;
+}
+.mode-card:hover { box-shadow: var(--shadow-md); }
+
+.kanban-col {
+  box-shadow: var(--shadow-xs);
+  transition: border-color var(--t-base), background var(--t-base), box-shadow var(--t-base);
+}
+.kanban-col.drag-over {
+  box-shadow: 0 0 0 1px rgba(79,142,247,.5), var(--shadow-sm);
+}
+
+.task-card {
+  box-shadow: var(--shadow-xs);
+  transition: border-color 0.16s var(--ease),
+              box-shadow   0.16s var(--ease),
+              transform    0.16s var(--ease);
+}
+.task-card:hover {
+  box-shadow: var(--shadow-md);
+  transform: translateY(-2px);
+}
+.task-card.dragging { box-shadow: var(--shadow-lg); }
+
+/* Mode-tinted border on task card hover */
+.task-card.mode-work:hover     { border-color: rgba(79,142,247,.35); }
+.task-card.mode-learning:hover { border-color: rgba(34,197,94,.35); }
+.task-card.mode-class:hover    { border-color: rgba(168,85,247,.35); }
+.task-card.mode-personal:hover { border-color: rgba(249,115,22,.35); }
+
+.metric-card {
+  transition: border-color var(--t-base), box-shadow var(--t-base);
+}
+.metric-card:hover { border-color: var(--border2); box-shadow: var(--shadow-sm); }
+
+.modal-box      { box-shadow: var(--shadow-lg); }
+.task-modal-box { box-shadow: var(--shadow-lg); }
+
+/* ── KANBAN COL HEADER — subtle gradient ── */
+.kanban-col-header {
+  background: linear-gradient(to bottom, rgba(255,255,255,.022) 0%, transparent 100%);
+}
+
+/* ── TYPOGRAPHY REFINEMENTS ── */
+.page-title    { line-height: 1.1; }
+.page-sub      { line-height: 1.6; }
+.card-label    { letter-spacing: 2px; }
+.drawer-title  { font-size: 15px; }
+
+/* Lift muted labels to WCAG AA contrast */
+.clock-date,
+.logo-sub,
+.task-filter-label,
+.drawer-section-label,
+.kanban-col-title,
+.today-section-label.created-today,
+.fs-sparkline-label,
+.mc-key,
+.rating-label,
+.task-form-label,
+.pomo-session-time,
+.sc-head {
+  color: var(--muted-aa);
+}
+
+/* Today task row title — slightly tighter tracking */
+.task-row-title { letter-spacing: -0.1px; }
+
+/* Task card title — improved hierarchy */
+.task-card-title { font-size: 13px; letter-spacing: -0.1px; }
+
+/* ── FOCUS RINGS (keyboard nav) ── */
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid rgba(79,142,247,.65);
+  outline-offset: 2px;
+}
+button:focus:not(:focus-visible),
+input:focus:not(:focus-visible),
+select:focus:not(:focus-visible),
+textarea:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* ── DISABLED STATES ── */
+button:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+input:disabled,
+select:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* ── BUTTON ENHANCEMENTS ── */
+
+/* Pomo control buttons */
+.pomo-btn {
+  transition: opacity 0.16s var(--ease),
+              transform 0.12s var(--ease),
+              background 0.2s var(--ease);
+}
+.pomo-btn:not(:disabled):hover  { opacity: 0.86; transform: translateY(-1px); }
+.pomo-btn:not(:disabled):active { transform: scale(0.96); opacity: 1; }
+
+/* Primary action buttons */
+.task-add-btn,
+.drawer-add-btn {
+  transition: opacity 0.16s var(--ease),
+              transform 0.12s var(--ease),
+              box-shadow 0.16s var(--ease);
+}
+.task-add-btn:hover,
+.drawer-add-btn:hover {
+  opacity: 0.88;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(79,142,247,.35);
+}
+.task-add-btn:active,
+.drawer-add-btn:active { transform: scale(0.97); opacity: 1; box-shadow: none; }
+
+/* Task card action buttons */
+.task-card-btn {
+  transition: color var(--t-fast), border-color var(--t-fast),
+              background var(--t-fast), transform 0.1s var(--ease);
+}
+.task-card-btn:hover       { transform: translateY(-1px); }
+.task-card-btn:active      { transform: scale(0.95); }
+.task-card-btn.btn-done:hover  { background: rgba(34,197,94,.12); }
+.task-card-btn.btn-start:hover { background: rgba(79,142,247,.1); }
+.task-card-btn.btn-delete:hover { background: rgba(239,68,68,.1); }
+
+/* Today task row buttons */
+.task-row-btn {
+  transition: color var(--t-fast), border-color var(--t-fast),
+              background var(--t-fast), transform 0.1s var(--ease);
+}
+.task-row-btn:hover { transform: translateY(-1px); }
+.task-row-btn:active { transform: scale(0.95); }
+
+/* Quick add btn */
+.task-quick-add-btn {
+  transition: color var(--t-base), border-color var(--t-base),
+              background var(--t-base), transform 0.12s var(--ease);
+}
+.task-quick-add-btn:hover  { transform: translateY(-1px); }
+.task-quick-add-btn:active { transform: scale(0.96); }
+
+/* Modal buttons */
+.modal-btn {
+  transition: opacity 0.16s var(--ease), transform 0.12s var(--ease);
+}
+.modal-btn:hover  { transform: translateY(-1px); }
+.modal-btn:active { transform: scale(0.97); opacity: 1; }
+
+/* FAB */
+.task-drawer-fab {
+  transition: transform 0.2s var(--ease), box-shadow 0.2s var(--ease);
+}
+.task-drawer-fab:active { transform: scale(0.92); }
+
+/* Star rating buttons */
+.star-btn {
+  transition: all 0.15s var(--ease);
+}
+.star-btn:hover  { transform: translateY(-1px); }
+.star-btn:active { transform: scale(0.95); }
+
+/* Nav buttons */
+.nav-btn {
+  border-radius: 6px 6px 0 0;
+  transition: color 0.16s var(--ease),
+              border-bottom-color 0.16s var(--ease),
+              background 0.16s var(--ease);
+}
+.nav-btn:hover { background: rgba(255,255,255,.03); }
+
+/* Filter chips */
+.filter-chip {
+  transition: color var(--t-fast), border-color var(--t-fast),
+              background var(--t-fast), transform 0.1s var(--ease);
+}
+.filter-chip:hover  { transform: translateY(-1px); }
+.filter-chip:active { transform: scale(0.96); }
+
+/* Kanban add button */
+.kanban-add-btn {
+  transition: color var(--t-fast), border-color var(--t-fast),
+              background var(--t-fast), transform 0.12s var(--ease);
+}
+.kanban-add-btn:hover  { transform: rotate(90deg) scale(1.1); }
+
+/* Drawer close button */
+.drawer-close {
+  transition: color var(--t-fast), border-color var(--t-fast),
+              background var(--t-fast), transform 0.12s var(--ease);
+}
+.drawer-close:hover  { transform: rotate(90deg); }
+.drawer-close:active { transform: rotate(90deg) scale(0.92); }
+
+/* ── STATUS BADGES — smooth transitions ── */
+.pomo-status-badge {
+  transition: background 0.25s var(--ease),
+              border-color 0.25s var(--ease),
+              color 0.25s var(--ease);
+}
+
+/* ── PROGRESS BAR ── */
+.pomo-progress-bar {
+  transition: width 1s linear, background 0.4s var(--ease);
+}
+
+/* ── FOCUS SCORE RING ── */
+.fs-ring-fill {
+  transition: stroke-dashoffset 0.9s cubic-bezier(0.4, 0, 0.2, 1),
+              stroke 0.4s var(--ease);
+}
+
+/* ── HABIT CELLS ── */
+.habit-cell {
+  transition: background 0.14s var(--ease),
+              border-color 0.14s var(--ease),
+              transform 0.1s var(--ease);
+}
+
+/* ── TODAY TASK ROWS — hover highlight ── */
+.today-task-row {
+  transition: background 0.14s var(--ease), padding 0.14s var(--ease);
+  border-radius: 6px;
+}
+.today-task-row:hover {
+  background: rgba(255,255,255,.02);
+}
+
+/* ── DRAWER ENTRANCE ── */
+.task-drawer {
+  transition: transform 0.28s cubic-bezier(0.0, 0.0, 0.2, 1);
+}
+
+/* ── STATS TABLE ROW HOVER ── */
+.stats-compare-row:hover > div {
+  background: rgba(255,255,255,.018);
+}
+.trends-table tbody tr:hover td {
+  background: rgba(255,255,255,.018);
+}
+
+/* ── MODE BAR FILL ANIMATION ── */
+.mode-bar-fill {
+  transition: width 0.75s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ── LOGO MARK ── */
+.logo-mark {
+  transition: transform 0.2s var(--ease), box-shadow 0.2s var(--ease);
+}
+
+/* ── STREAK CHIP HOVER ── */
+.streak-chip {
+  transition: border-color var(--t-base), background var(--t-base);
+}
+.streak-chip:hover {
+  border-color: var(--border2);
+  background: var(--s3);
+}
+
+/* ── HABIT STREAK CHIP HOVER ── */
+.habit-streak-chip {
+  transition: border-color var(--t-base), background var(--t-base);
+}
+.habit-streak-chip:hover {
+  border-color: var(--border2);
+  background: var(--s3);
+}
+
+/* ── CARD LABEL ROW CONSISTENCY ── */
+.card-label-row { margin-bottom: 16px; }
+.focus-score-card .card-label { margin-bottom: 18px; }
+.today-tasks-card .card-label-row { margin-bottom: 12px; }
+
+/* ══════════════════════════════════════════════════════════════════
+   FINANCE
+   ══════════════════════════════════════════════════════════════════ */
+
+/* ── Finance mode ambient theme ── */
+body.mode-finance .nav-btn.active  { color: #7b9cff; border-bottom-color: #7b9cff; }
+body.mode-finance .page-eyebrow    { color: rgba(123,156,255,.8); }
+
+/* ── Summary cards row ── */
+.finance-cards {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+  margin-bottom: 16px;
+}
+@media (max-width: 900px) {
+  .finance-cards { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 500px) {
+  .finance-cards { grid-template-columns: 1fr; }
+}
+
+.finance-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+.finance-amount {
+  font-size: 26px;
+  font-weight: 900;
+  letter-spacing: -1px;
+  color: var(--text);
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  transition: color 0.2s;
+}
+.finance-amount.fin-income  { color: #22c55e; }
+.finance-amount.fin-expense { color: #ef4444; }
+
+/* ── Action row ── */
+.finance-action-row {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 16px;
+}
+
+.finance-add-btn {
+  padding: 8px 18px;
+  border-radius: 9px;
+  border: none;
+  background: #3b5bdb;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: opacity 0.16s var(--ease),
+              transform 0.12s var(--ease),
+              box-shadow 0.16s var(--ease);
+  box-shadow: 0 2px 10px rgba(59,91,219,.3);
+}
+.finance-add-btn:hover  { opacity: 0.88; transform: translateY(-1px); box-shadow: 0 4px 16px rgba(59,91,219,.4); }
+.finance-add-btn:active { transform: scale(0.97); opacity: 1; }
+
+/* ── Transaction list ── */
+.transaction-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 11px 0;
+  border-bottom: 1px solid var(--border);
+  transition: background 0.14s var(--ease);
+}
+.transaction-row:last-child { border-bottom: none; }
+.transaction-row:hover { background: rgba(255,255,255,.02); }
+
+.transaction-left { flex: 1; min-width: 0; }
+
+.transaction-desc {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin-bottom: 3px;
+}
+
+.transaction-meta {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.fin-cat-chip {
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: var(--s3);
+  border: 1px solid var(--border);
+  color: var(--muted-aa);
+  white-space: nowrap;
+}
+
+.transaction-date {
+  font-size: 10px;
+  color: var(--muted-aa);
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+
+.transaction-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.transaction-amount {
+  font-size: 14px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.3px;
+}
+.transaction-amount.income  { color: #22c55e; }
+.transaction-amount.expense { color: #ef4444; }
+
+.fin-delete-btn {
+  width: 22px;
+  height: 22px;
+  border-radius: 5px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--muted);
+  font-size: 11px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color var(--t-fast), border-color var(--t-fast),
+              background var(--t-fast), transform 0.1s var(--ease);
+  opacity: 0;
+}
+.transaction-row:hover .fin-delete-btn { opacity: 1; }
+.fin-delete-btn:hover {
+  color: #ef4444;
+  border-color: rgba(239,68,68,.3);
+  background: rgba(239,68,68,.08);
+}
+.fin-delete-btn:active { transform: scale(0.9); }

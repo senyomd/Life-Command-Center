@@ -26,8 +26,9 @@ function navigateTo(mode) {
   history.replaceState(null, "", "#" + mode);
   currentMode = mode;
 
-  if (mode === "stats")  renderStatsPage();
-  if (mode === "tasks")  renderKanban();
+  if (mode === "stats")    renderStatsPage();
+  if (mode === "tasks")    renderKanban();
+  if (mode === "finance")  renderFinanceDashboard();
 }
 
 // ── CLOCK ──
@@ -1004,6 +1005,126 @@ function refreshAllPomodoroTaskSelects() {
   });
 }
 
+// ── FINANCE ENGINE ──
+
+let financeEngine = null;
+
+const FINANCE_INCOME_CATS  = ['salary', 'freelance', 'investment', 'gift', 'other'];
+const FINANCE_EXPENSE_CATS = ['food', 'housing', 'transport', 'utilities', 'health',
+                              'entertainment', 'clothing', 'education', 'savings', 'other'];
+
+function initFinance() {
+  financeEngine = new FinanceEngine();
+  renderFinanceDashboard();
+}
+
+function renderFinanceDashboard() {
+  if (!financeEngine) return;
+  const totals = financeEngine.getTotals();
+
+  document.getElementById('finance-income').textContent   = '$' + totals.income.toFixed(2);
+  document.getElementById('finance-expenses').textContent = '$' + totals.expenses.toFixed(2);
+
+  // Net: show sign explicitly, color by positive/negative
+  const netEl = document.getElementById('finance-net');
+  const isNeg = totals.net < 0;
+  netEl.textContent = (isNeg ? '−$' : '$') + Math.abs(totals.net).toFixed(2);
+  netEl.className   = 'finance-amount' + (isNeg ? ' fin-expense' : totals.net > 0 ? ' fin-income' : '');
+
+  const rateEl = document.getElementById('finance-savings-rate');
+  if (totals.savingsRate !== null) {
+    rateEl.textContent = totals.savingsRate.toFixed(1) + '%';
+    rateEl.className   = 'finance-amount' + (totals.savingsRate >= 0 ? ' fin-income' : ' fin-expense');
+  } else {
+    rateEl.textContent = '—';
+    rateEl.className   = 'finance-amount';
+  }
+
+  renderFinanceTransactions();
+}
+
+function renderFinanceTransactions() {
+  const container = document.getElementById('finance-transaction-list');
+  if (!container || !financeEngine) return;
+
+  const transactions = financeEngine.getTransactions();
+  if (!transactions.length) {
+    container.innerHTML = '<p class="placeholder-text">No transactions yet. Add your first one above.</p>';
+    return;
+  }
+
+  container.innerHTML = transactions.slice(0, 20).map(t => {
+    const desc    = escHtml(t.description || t.category);
+    const sign    = t.type === 'income' ? '+' : '−';
+    const amtStr  = sign + '$' + t.amount.toFixed(2);
+    const catChip = `<span class="fin-cat-chip">${escHtml(t.category)}</span>`;
+    return `<div class="transaction-row">
+      <div class="transaction-left">
+        <div class="transaction-desc">${desc}</div>
+        <div class="transaction-meta">${catChip}<span class="transaction-date">${t.date}</span></div>
+      </div>
+      <div class="transaction-right">
+        <span class="transaction-amount ${t.type}">${amtStr}</span>
+        <button class="fin-delete-btn" onclick="handleDeleteTransaction('${t.id}')" title="Delete">✕</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function openAddTransactionModal() {
+  const modal = document.getElementById('finance-add-modal');
+  if (!modal) return;
+  document.getElementById('trans-type').value        = 'expense';
+  document.getElementById('trans-amount').value      = '';
+  document.getElementById('trans-date').value        = FinanceEngine.getTodayDate();
+  document.getElementById('trans-description').value = '';
+  updateTransactionCategories();
+  modal.style.display = 'flex';
+  setTimeout(() => document.getElementById('trans-amount').focus(), 50);
+}
+
+function closeAddTransactionModal() {
+  const modal = document.getElementById('finance-add-modal');
+  if (modal) modal.style.display = 'none';
+}
+
+function updateTransactionCategories() {
+  const type = document.getElementById('trans-type').value;
+  const cats = type === 'income' ? FINANCE_INCOME_CATS : FINANCE_EXPENSE_CATS;
+  document.getElementById('trans-category').innerHTML =
+    cats.map(c => `<option value="${c}">${c.charAt(0).toUpperCase() + c.slice(1)}</option>`).join('');
+}
+
+function handleAddTransaction() {
+  const type        = document.getElementById('trans-type').value;
+  const rawAmount   = document.getElementById('trans-amount').value;
+  const category    = document.getElementById('trans-category').value;
+  const date        = document.getElementById('trans-date').value || undefined;
+  const description = document.getElementById('trans-description').value.trim();
+
+  const amount = parseFloat(rawAmount);
+  if (!amount || amount <= 0) {
+    document.getElementById('trans-amount').focus();
+    document.getElementById('trans-amount').style.borderColor = 'rgba(239,68,68,.6)';
+    setTimeout(() => { document.getElementById('trans-amount').style.borderColor = ''; }, 1200);
+    return;
+  }
+
+  try {
+    financeEngine.addTransaction(type, amount, category, date, description);
+    closeAddTransactionModal();
+    renderFinanceDashboard();
+  } catch (e) {
+    console.error('Add transaction failed:', e.message);
+  }
+}
+
+function handleDeleteTransaction(id) {
+  if (!financeEngine) return;
+  financeEngine.deleteTransaction(id);
+  renderFinanceDashboard();
+}
+
 // ── UTILITY ──
 
 /** Format minutes as "1h 25m", "45m", etc. Returns null if 0. */
@@ -1145,6 +1266,8 @@ document.addEventListener("DOMContentLoaded", () => {
   renderHomeDashboard();
   renderTodayTasks();
   refreshAllPomodoroTaskSelects();
+
+  initFinance();
 });
 
 window.addEventListener("hashchange", () => {
@@ -1156,5 +1279,6 @@ window.addEventListener("keydown", (e) => {
   if (e.key === "Escape") {
     closeTaskModal();
     closeTaskDrawer();
+    closeAddTransactionModal();
   }
 });
