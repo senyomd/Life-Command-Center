@@ -1041,6 +1041,8 @@ function renderFinanceDashboard() {
   }
 
   renderFinanceTransactions();
+  renderCategoryBreakdown();
+  renderBudgets();
 }
 
 function renderFinanceTransactions() {
@@ -1123,6 +1125,166 @@ function handleDeleteTransaction(id) {
   if (!financeEngine) return;
   financeEngine.deleteTransaction(id);
   renderFinanceDashboard();
+}
+
+// ── FINANCE: CATEGORY BREAKDOWN ──
+
+const PIE_COLORS = ['#ef4444','#f97316','#eab308','#22c55e','#3b82f6','#8b5cf6','#ec4899','#06b6d4'];
+
+function renderCategoryBreakdown() {
+  const chartEl  = document.getElementById('finance-category-chart');
+  const legendEl = document.getElementById('finance-category-legend');
+  if (!chartEl || !legendEl || !financeEngine) return;
+
+  // Expense breakdown only
+  const byCat  = financeEngine.getByCategory({ type: 'expense' });
+  const entries = Object.entries(byCat)
+    .filter(([, amt]) => amt > 0)
+    .sort((a, b) => b[1] - a[1]);
+
+  if (!entries.length) {
+    chartEl.innerHTML  = '<p class="placeholder-text" style="padding:32px 0;text-align:center;">No expenses to show</p>';
+    legendEl.innerHTML = '';
+    return;
+  }
+
+  const total = entries.reduce((s, [, a]) => s + a, 0);
+  const CX = 100, CY = 100, R_OUT = 78, R_IN = 50;
+
+  function polar(deg, r) {
+    const rad = (deg - 90) * Math.PI / 180;
+    return { x: +(CX + r * Math.cos(rad)).toFixed(3),
+             y: +(CY + r * Math.sin(rad)).toFixed(3) };
+  }
+
+  let paths = '';
+  let angle = 0;
+
+  entries.forEach(([, amt], i) => {
+    const sweep = (amt / total) * 360;
+    const color = PIE_COLORS[i % PIE_COLORS.length];
+
+    if (sweep >= 359.99) {
+      // Single-category: two semicircles avoids degenerate arc
+      paths += `<path d="M ${CX} ${CY - R_OUT} A ${R_OUT} ${R_OUT} 0 1 1 ${CX - 0.001} ${CY - R_OUT} Z" fill="${color}"/>`;
+    } else {
+      const p1o = polar(angle,          R_OUT);
+      const p2o = polar(angle + sweep,  R_OUT);
+      const p1i = polar(angle,          R_IN);
+      const p2i = polar(angle + sweep,  R_IN);
+      const lg  = sweep > 180 ? 1 : 0;
+      const d   = `M ${p1o.x} ${p1o.y} A ${R_OUT} ${R_OUT} 0 ${lg} 1 ${p2o.x} ${p2o.y} ` +
+                  `L ${p2i.x} ${p2i.y} A ${R_IN} ${R_IN} 0 ${lg} 0 ${p1i.x} ${p1i.y} Z`;
+      paths += `<path d="${d}" fill="${color}"/>`;
+    }
+    angle += sweep;
+  });
+
+  // Center: total expenses
+  const centerTxt = `
+    <text x="${CX}" y="${CY - 8}" text-anchor="middle" font-size="10" font-weight="700"
+          fill="#7a8da8" font-family="Segoe UI,system-ui,sans-serif">EXPENSES</text>
+    <text x="${CX}" y="${CY + 12}" text-anchor="middle" font-size="15" font-weight="900"
+          fill="#dde4f0" font-family="Segoe UI,system-ui,sans-serif">$${total.toFixed(2)}</text>`;
+
+  chartEl.innerHTML = `<svg width="200" height="200" viewBox="0 0 200 200" style="display:block;margin:0 auto;">
+    ${paths}
+    <circle cx="${CX}" cy="${CY}" r="${R_IN - 1}" fill="var(--s2)"/>
+    ${centerTxt}
+  </svg>`;
+
+  legendEl.innerHTML = entries.map(([cat, amt], i) => {
+    const pct = (amt / total * 100).toFixed(1);
+    return `<div class="fin-legend-row">
+      <span class="fin-legend-dot" style="background:${PIE_COLORS[i % PIE_COLORS.length]};"></span>
+      <span class="fin-legend-cat">${escHtml(cat)}</span>
+      <span class="fin-legend-pct">${pct}%</span>
+      <span class="fin-legend-amt">$${amt.toFixed(2)}</span>
+    </div>`;
+  }).join('');
+}
+
+// ── FINANCE: BUDGETS ──
+
+function renderBudgets() {
+  const container = document.getElementById('finance-budget-list');
+  if (!container || !financeEngine) return;
+
+  const budgets = financeEngine.getBudgets();
+  if (!budgets.length) {
+    container.innerHTML = '<p class="placeholder-text">No budgets set yet.</p>';
+    return;
+  }
+
+  container.innerHTML = budgets.map(b => {
+    const status  = financeEngine.getBudgetStatus(b.category);
+    const fillPct = Math.min(status.percentUsed, 100);
+    const barCls  = status.status;  // 'ok' | 'warning' | 'over'
+    const overAmt = (status.spent - status.limit).toFixed(2);
+
+    return `<div class="budget-item">
+      <div class="budget-item-header">
+        <span class="budget-item-name">${escHtml(b.category)}</span>
+        <span class="budget-item-amounts">
+          <span class="budget-spent">$${status.spent.toFixed(2)}</span>
+          <span class="budget-limit-label"> / $${status.limit.toFixed(2)}</span>
+        </span>
+      </div>
+      <div class="budget-track">
+        <div class="budget-fill ${barCls}" style="width:${fillPct}%;"></div>
+      </div>
+      <div class="budget-item-footer">
+        <span class="budget-pct">${status.percentUsed.toFixed(1)}% used</span>
+        ${status.status === 'over'
+          ? `<span class="budget-over-tag">⚠ Over by $${overAmt}</span>`
+          : `<span class="budget-remaining">$${status.remaining.toFixed(2)} remaining</span>`}
+        <button class="budget-remove-btn" onclick="handleRemoveBudget('${b.id}')">Remove</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function openSetBudgetModal() {
+  document.getElementById('budget-category').value = '';
+  document.getElementById('budget-limit').value    = '';
+  document.getElementById('finance-budget-modal').style.display = 'flex';
+  setTimeout(() => document.getElementById('budget-category').focus(), 50);
+}
+
+function closeSetBudgetModal() {
+  document.getElementById('finance-budget-modal').style.display = 'none';
+}
+
+function handleSetBudget() {
+  const category = document.getElementById('budget-category').value;
+  const rawLimit = document.getElementById('budget-limit').value;
+  const limit    = parseFloat(rawLimit);
+
+  if (!category) {
+    document.getElementById('budget-category').focus();
+    return;
+  }
+  if (!limit || limit <= 0) {
+    const el = document.getElementById('budget-limit');
+    el.focus();
+    el.style.borderColor = 'rgba(239,68,68,.6)';
+    setTimeout(() => { el.style.borderColor = ''; }, 1200);
+    return;
+  }
+
+  financeEngine.setBudget(category, limit, 'monthly');
+  closeSetBudgetModal();
+  renderBudgets();
+}
+
+function handleRemoveBudget(budgetId) {
+  // Direct array mutation + save — no engine method needed for one-off removal
+  const idx = financeEngine.budgets.findIndex(b => b.id === budgetId);
+  if (idx !== -1) {
+    financeEngine.budgets.splice(idx, 1);
+    financeEngine.saveState();
+    renderBudgets();
+  }
 }
 
 // ── UTILITY ──
@@ -1280,5 +1442,6 @@ window.addEventListener("keydown", (e) => {
     closeTaskModal();
     closeTaskDrawer();
     closeAddTransactionModal();
+    closeSetBudgetModal();
   }
 });
