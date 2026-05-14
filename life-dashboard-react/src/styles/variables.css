@@ -1,0 +1,39 @@
+/* ── Design tokens — single source of truth ── */
+:root {
+  /* Surface palette */
+  --bg:      #07090f;
+  --s1:      #0d1018;
+  --s2:      #131720;
+  --s3:      #191e2c;
+
+  /* Borders */
+  --border:  #1c2135;
+  --border2: #26304a;
+
+  /* Text */
+  --text:     #dde4f0;
+  --muted:    #4e5e78;
+  --muted2:   #7a8da8;
+  --muted-aa: #8899b4;   /* WCAG AA on --bg */
+
+  /* Mode accent colors */
+  --work:          #4f8ef7;
+  --learning:      #22c55e;
+  --class:         #a855f7;
+  --entertainment: #f97316;
+  --finance:       #3b5bdb;
+  --home:          #4f8ef7;
+
+  /* Shadows */
+  --shadow-xs: 0 1px 2px rgba(0,0,0,.45);
+  --shadow-sm: 0 2px 6px rgba(0,0,0,.45), 0 1px 2px rgba(0,0,0,.3);
+  --shadow-md: 0 6px 20px rgba(0,0,0,.5),  0 2px 6px rgba(0,0,0,.35);
+  --shadow-lg: 0 12px 40px rgba(0,0,0,.6), 0 4px 12px rgba(0,0,0,.4);
+
+  /* Easing */
+  --ease:     cubic-bezier(0.4, 0.0, 0.2, 1);
+  --ease-out: cubic-bezier(0.0, 0.0, 0.2, 1);
+  --t-fast:   150ms var(--ease);
+  --t-base:   200ms var(--ease);
+  --t-slow:   300ms var(--ease);
+}

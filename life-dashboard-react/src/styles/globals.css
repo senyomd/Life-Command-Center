@@ -1,0 +1,123 @@
+/* ── Global resets + base styles ── */
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+*  { scrollbar-width: thin; scrollbar-color: var(--border2) transparent; }
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--muted); }
+
+body {
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  overflow-x: hidden;
+  line-height: 1.5;
+}
+
+::selection { background: rgba(79,142,247,.28); color: var(--text); }
+
+/* Focus rings */
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid rgba(79,142,247,.65);
+  outline-offset: 2px;
+}
+button:focus:not(:focus-visible),
+input:focus:not(:focus-visible),
+select:focus:not(:focus-visible),
+textarea:focus:not(:focus-visible) { outline: none; }
+
+button:disabled { opacity: 0.35; cursor: not-allowed; }
+input:disabled, select:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* ── Layout ── */
+.app-layout {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+.app-main {
+  padding: 28px;
+  max-width: 1400px;
+  margin: 0 auto;
+  width: 100%;
+  position: relative;
+  z-index: 1;
+  flex: 1;
+}
+
+/* ── Ambient glow ── */
+body::before {
+  content: '';
+  position: fixed;
+  top: -200px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 700px;
+  height: 400px;
+  border-radius: 50%;
+  filter: blur(120px);
+  opacity: 0.07;
+  pointer-events: none;
+  transition: background 0.6s ease;
+  z-index: 0;
+}
+body.mode-home::before,
+body.mode-work::before          { background: #4f8ef7; }
+body.mode-learning::before      { background: #22c55e; }
+body.mode-class::before         { background: #a855f7; }
+body.mode-entertainment::before { background: #f97316; }
+body.mode-finance::before       { background: #3b5bdb; }
+
+/* ── Page transitions ── */
+.page-enter { animation: pageIn 0.28s var(--ease-out); }
+@keyframes pageIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Page header ── */
+.page-header   { margin-bottom: 28px; }
+.page-eyebrow  { font-size: 10px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: var(--muted-aa); margin-bottom: 6px; }
+.page-title    { font-size: 30px; font-weight: 800; letter-spacing: -1.2px; line-height: 1.1; }
+.page-sub      { font-size: 13px; color: var(--muted); margin-top: 4px; line-height: 1.6; }
+
+/* ── Card ── */
+.card {
+  background: var(--s1);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 20px;
+  box-shadow: var(--shadow-xs);
+  transition: box-shadow var(--t-base), border-color var(--t-base);
+}
+.card:hover { box-shadow: var(--shadow-sm); }
+.card-label {
+  font-size: 10px; font-weight: 800; letter-spacing: 2px;
+  text-transform: uppercase; color: var(--muted-aa); margin-bottom: 14px;
+}
+.card-label-row {
+  display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px;
+}
+.card-label-row .card-label { margin-bottom: 0; }
+
+.placeholder-text { font-size: 13px; color: var(--muted); line-height: 1.7; }
+
+/* ── Buttons ── */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  padding: 8px 16px; border-radius: 9px; border: none;
+  font-size: 13px; font-weight: 700; cursor: pointer;
+  transition: opacity 0.16s var(--ease), transform 0.12s var(--ease), box-shadow 0.16s var(--ease);
+}
+.btn:hover  { opacity: 0.88; transform: translateY(-1px); }
+.btn:active { transform: scale(0.97); opacity: 1; }
+.btn-primary   { background: #4f8ef7; color: #000; }
+.btn-secondary { background: var(--s2); color: var(--text); border: 1px solid var(--border); }
+.btn-danger    { background: rgba(239,68,68,.15); color: #ef4444; border: 1px solid rgba(239,68,68,.25); }
+.btn-ghost     { background: transparent; color: var(--muted); border: 1px solid var(--border); }
