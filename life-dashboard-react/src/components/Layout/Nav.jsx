@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import useAppStore from '../../store/appStore'
 
@@ -18,8 +18,18 @@ function Nav() {
   const location  = useLocation()
   const setMode   = useAppStore((s) => s.setCurrentMode)
 
+  // Sync body class on initial load and route changes
+  useEffect(() => {
+    const match = NAV_ITEMS.find((item) => item.path === location.pathname)
+    if (match) {
+      document.body.className = `mode-${match.mode}`
+      setMode(match.mode)
+    }
+  }, [location.pathname, setMode])
+
   function handleNav(item) {
     setMode(item.mode)
+    document.body.className = `mode-${item.mode}`
     navigate(item.path)
   }
 

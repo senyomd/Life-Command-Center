@@ -219,3 +219,5 @@ class HabitEngine {
 }
 
 if (typeof module !== 'undefined') module.exports = HabitEngine;
+
+export default HabitEngine;

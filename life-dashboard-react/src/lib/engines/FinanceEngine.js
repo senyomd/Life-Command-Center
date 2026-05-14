@@ -303,3 +303,5 @@ class FinanceEngine {
 }
 
 if (typeof module !== 'undefined') module.exports = FinanceEngine;
+
+export default FinanceEngine;

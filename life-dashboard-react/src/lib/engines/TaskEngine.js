@@ -435,3 +435,5 @@ class TaskEngine {
 }
 
 if (typeof module !== 'undefined') module.exports = TaskEngine;
+
+export default TaskEngine;

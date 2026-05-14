@@ -327,3 +327,5 @@ class AnalyticsEngine {
 }
 
 if (typeof module !== 'undefined') module.exports = AnalyticsEngine;
+
+export default AnalyticsEngine;

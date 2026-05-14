@@ -200,3 +200,5 @@ class PomodoroEngine {
     return `${m}:${s}`;
   }
 }
+
+export default PomodoroEngine;

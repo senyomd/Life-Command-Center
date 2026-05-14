@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import useAppStore from '../../store/appStore'
+import './Layout.css'
 
 function Header() {
   const [time, setTime] = useState('')
