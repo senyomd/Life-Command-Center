@@ -18,14 +18,16 @@ function Nav() {
   const location  = useLocation()
   const setMode   = useAppStore((s) => s.setCurrentMode)
 
-  // Sync body class on initial load and route changes
+  // Sync body class on initial load and route changes.
+  // setMode is a stable Zustand action — intentionally omitted from deps.
   useEffect(() => {
     const match = NAV_ITEMS.find((item) => item.path === location.pathname)
     if (match) {
       document.body.className = `mode-${match.mode}`
       setMode(match.mode)
     }
-  }, [location.pathname, setMode])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.pathname])
 
   function handleNav(item) {
     setMode(item.mode)
