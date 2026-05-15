@@ -10,7 +10,7 @@ function getMonthStart(date) {
   return `${y}-${m}-01`
 }
 
-const EXPENSE_CATS = ['food', 'housing', 'transport', 'utilities', 'health', 'entertainment', 'clothing', 'education', 'savings', 'other']
+const EXPENSE_CATS = ['food', 'housing', 'transport', 'utilities', 'health', 'entertainment', 'clothing', 'education', 'savings', 'credit card', 'other']
 const INCOME_CATS  = ['salary', 'freelance', 'investment', 'gift', 'other']
 const PIE_COLORS   = ['#4f8ef7','#a855f7','#22c55e','#f97316','#ef4444','#eab308','#06b6d4','#ec4899','#84cc16','#f472b6']
 
