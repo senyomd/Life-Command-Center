@@ -79,6 +79,8 @@ function Finance() {
   const [form, setForm] = useState({ type: 'expense', amount: '', category: 'food', description: '', date: '' })
   const [budgetForm, setBudgetForm] = useState({ category: 'food', limit: '', period: 'monthly' })
 
+  const healthScore = engine.getFinancialHealthScore()
+
   const today      = getTodayDate()
   const monthStart = getMonthStart(today)
   const totals     = engine.getTotals({ sinceDate: monthStart, untilDate: today })
@@ -126,6 +128,31 @@ function Finance() {
         <div className="page-eyebrow">Finance</div>
         <h1 className="page-title">Finance Tracker</h1>
         <p className="page-sub">This month's income, expenses, and budget health</p>
+      </div>
+
+      {/* Financial Health Score */}
+      <div className="card" style={{ marginBottom: 24, display: 'flex', alignItems: 'center', gap: 28, padding: '20px 24px', background: `linear-gradient(135deg, ${healthScore.color}12, var(--s1))`, borderColor: `${healthScore.color}40` }}>
+        <div style={{ textAlign: 'center', flexShrink: 0 }}>
+          <div style={{ fontSize: 52, fontWeight: 900, lineHeight: 1, color: healthScore.color, letterSpacing: -2 }}>{healthScore.score}</div>
+          <div style={{ fontSize: 11, fontWeight: 700, color: healthScore.color, marginTop: 4, textTransform: 'uppercase', letterSpacing: 1 }}>{healthScore.health}</div>
+        </div>
+        <div style={{ flex: 1 }}>
+          <div className="card-label" style={{ marginBottom: 10 }}>Financial Health</div>
+          {[
+            { label: 'Savings Rate', value: healthScore.breakdown.savingsRate, suffix: '%' },
+            { label: 'Budget Adherence', value: healthScore.breakdown.budgetAdherence, suffix: '%' },
+            { label: 'Expense Trend', value: healthScore.breakdown.expenseTrend, suffix: '%' },
+            { label: 'Income Ratio', value: healthScore.breakdown.incomeRatio, suffix: '%' },
+          ].map(({ label, value }) => (
+            <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 5 }}>
+              <span style={{ fontSize: 11, color: 'var(--muted)', width: 120, flexShrink: 0 }}>{label}</span>
+              <div style={{ flex: 1, height: 4, background: 'var(--s3)', borderRadius: 3, overflow: 'hidden' }}>
+                <div style={{ height: '100%', width: `${value}%`, background: healthScore.color, borderRadius: 3, transition: 'width 0.4s ease' }} />
+              </div>
+              <span style={{ fontSize: 11, color: 'var(--muted-aa)', width: 32, textAlign: 'right' }}>{Math.round(value)}</span>
+            </div>
+          ))}
+        </div>
       </div>
 
       {/* Summary cards */}

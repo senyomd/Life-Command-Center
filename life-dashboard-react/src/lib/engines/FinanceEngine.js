@@ -269,6 +269,90 @@ class FinanceEngine {
     };
   }
 
+  // ── FINANCIAL HEALTH SCORE ────────────────────────────────────────────────
+
+  /**
+   * Compute a 0-100 financial health score from 4 weighted factors.
+   * @returns {{ score, breakdown, health, color }}
+   */
+  getFinancialHealthScore() {
+    const today = FinanceEngine.getTodayDate();
+    const thisWeekStart = FinanceEngine.getWeekStart(today);
+
+    // Last week date range
+    const thisWeekStartDate = new Date(thisWeekStart + 'T12:00:00');
+    const lastWeekEndDate = new Date(thisWeekStartDate);
+    lastWeekEndDate.setDate(lastWeekEndDate.getDate() - 1);
+    const lastWeekStartDate = new Date(lastWeekEndDate);
+    lastWeekStartDate.setDate(lastWeekStartDate.getDate() - 6);
+    const lastWeekEnd   = FinanceEngine._fmtDate(lastWeekEndDate);
+    const lastWeekStart = FinanceEngine._fmtDate(lastWeekStartDate);
+
+    // Factor 1: Savings Rate (40%)
+    const totals = this.getTotals();
+    const savingsRate  = totals.income > 0
+      ? ((totals.income - totals.expenses) / totals.income) * 100
+      : 0;
+    const savingsScore = Math.max(0, Math.min(100, savingsRate));
+
+    // Factor 2: Budget Adherence (30%)
+    const budgetScore = this._calcBudgetAdherence();
+
+    // Factor 3: Expense Trend (20%)
+    const thisWeekTxns = this.getTransactions({ sinceDate: thisWeekStart, untilDate: today });
+    const lastWeekTxns = this.getTransactions({ sinceDate: lastWeekStart, untilDate: lastWeekEnd });
+    const trendScore   = this._calcExpenseTrend(thisWeekTxns, lastWeekTxns);
+
+    // Factor 4: Income-to-Expense Ratio (10%)
+    const incomeRatio = totals.income > totals.expenses ? 100
+      : totals.income === totals.expenses ? 50
+      : 0;
+
+    const raw   = (savingsScore * 0.40) + (budgetScore * 0.30) + (trendScore * 0.20) + (incomeRatio * 0.10);
+    const score = Math.max(0, Math.min(100, Math.round(raw)));
+
+    return {
+      score,
+      breakdown: { savingsRate: savingsScore, budgetAdherence: budgetScore, expenseTrend: trendScore, incomeRatio },
+      health: this._healthStatus(score),
+      color:  this._healthColor(score),
+    };
+  }
+
+  _calcBudgetAdherence() {
+    if (!this.budgets.length) return 50;
+    let total = 0;
+    for (const budget of this.budgets) {
+      const status = this.getBudgetStatus(budget.category);
+      const adherence = status ? Math.min(100, Math.max(0, 100 - (status.percentUsed - 100))) : 100;
+      total += adherence;
+    }
+    return total / this.budgets.length;
+  }
+
+  _calcExpenseTrend(thisWeekTxns, lastWeekTxns) {
+    const sum = (txns) => txns.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0);
+    const thisWeek = sum(thisWeekTxns);
+    const lastWeek = sum(lastWeekTxns);
+    if (lastWeek === 0) return 50;
+    const trend = ((lastWeek - thisWeek) / lastWeek) * 100;
+    return Math.max(0, Math.min(100, 50 + (trend / 2)));
+  }
+
+  _healthStatus(score) {
+    if (score >= 80) return 'Excellent';
+    if (score >= 60) return 'Healthy';
+    if (score >= 40) return 'Fair';
+    return 'Needs Work';
+  }
+
+  _healthColor(score) {
+    if (score >= 80) return '#22c55e';
+    if (score >= 60) return '#3b82f6';
+    if (score >= 40) return '#eab308';
+    return '#ef4444';
+  }
+
   // ── PERSISTENCE ───────────────────────────────────────────────────────────
 
   /** Persist both transactions and budgets. */
