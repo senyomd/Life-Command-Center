@@ -38,7 +38,7 @@ class EntertainmentEngine {
    * @param {number} [opts.progress] — starting progress; default 0
    * @returns {string} new item id
    */
-  addItem({ title, type = 'show', total = null, progress = 0 } = {}) {
+  addItem({ title, type = 'show', total = null, progress = 0, genre = null, mood = [], notes = '' } = {}) {
     if (!title || !String(title).trim()) throw new Error('title is required')
     if (!EntertainmentEngine.VALID_TYPES.includes(type)) {
       throw new Error(`Invalid type "${type}"`)
@@ -55,6 +55,9 @@ class EntertainmentEngine {
       progress:    prog,
       total:       tot,
       rating:      null,
+      genre:       genre ? String(genre).trim().toLowerCase() : null,
+      mood:        Array.isArray(mood) ? [...mood] : [],
+      notes:       String(notes || '').trim(),
       lastUpdated: today,
       dateAdded:   today,
     }
@@ -78,8 +81,7 @@ class EntertainmentEngine {
 
   /**
    * Update any allowed fields on an item.
-   * Allowed: title, type, total, rating
-   * Use setStatus / incrementProgress for those transitions.
+   * Allowed: title, type, total, rating, progress, genre, mood, notes
    */
   updateItem(id, changes = {}) {
     const item = this.items.find(i => i.id === id)
@@ -94,13 +96,44 @@ class EntertainmentEngine {
     if ('total' in changes) {
       item.total = changes.total != null ? Math.max(1, Number(changes.total)) : null
     }
+    if ('progress' in changes) {
+      item.progress = Math.max(0, Number(changes.progress) || 0)
+    }
     if ('rating' in changes) {
-      item.rating = changes.rating != null ? Math.min(10, Math.max(1, Number(changes.rating))) : null
+      item.rating = changes.rating != null ? Math.min(5, Math.max(1, Number(changes.rating))) : null
+    }
+    if ('genre' in changes) {
+      item.genre = changes.genre ? String(changes.genre).trim().toLowerCase() : null
+    }
+    if ('mood' in changes && Array.isArray(changes.mood)) {
+      item.mood = [...changes.mood]
+    }
+    if ('notes' in changes) {
+      item.notes = String(changes.notes || '').trim()
     }
 
     item.lastUpdated = EntertainmentEngine.todayDate()
     this._save()
     return item
+  }
+
+  /** Aggregate stats for the stats view. */
+  getStats() {
+    const byStatus = {}
+    const byGenre  = {}
+    const byMood   = { escape: 0, learning: 0, social: 0, comfort: 0 }
+    let totalProgress = 0
+
+    for (const item of this.items) {
+      byStatus[item.status] = (byStatus[item.status] || 0) + 1
+      totalProgress += (item.progress || 0)
+      if (item.genre) byGenre[item.genre] = (byGenre[item.genre] || 0) + 1
+      for (const m of (item.mood || [])) {
+        if (m in byMood) byMood[m]++
+      }
+    }
+
+    return { total: this.items.length, byStatus, byGenre, byMood, totalProgress }
   }
 
   // ── STATUS & PROGRESS ─────────────────────────────────────────────────────
