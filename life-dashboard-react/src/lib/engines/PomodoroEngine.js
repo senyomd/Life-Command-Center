@@ -28,7 +28,7 @@ class PomodoroEngine {
 
   // ── PUBLIC ────────────────────────────────────────────────
 
-  start(durationMinutes) {
+  start(durationMinutes, label = '') {
     const secs = Math.floor(durationMinutes * 60);
     this.duration         = secs;
     this.remaining        = secs;
@@ -37,6 +37,7 @@ class PomodoroEngine {
     this.startedAt        = new Date().toISOString();
     this.pausedAt         = null;
     this.currentSessionId = this._uuid();
+    this.label            = String(label).trim();
 
     this._saveState();
     this._startTick();
@@ -113,6 +114,7 @@ class PomodoroEngine {
     this.pausedAt         = null;
     this.interrupted      = false;
     this.currentSessionId = null;
+    this.label            = '';
   }
 
   // ── PERSISTENCE ───────────────────────────────────────────
@@ -152,6 +154,7 @@ class PomodoroEngine {
       interrupted:  this.interrupted,
       energyLevel:  overrides.energyLevel  ?? null,
       focusQuality: overrides.focusQuality ?? null,
+      label:        this.label || null,
     };
 
     let sessions = [];

@@ -35,7 +35,8 @@ function Pomodoro({ mode = 'work' }) {
   const dashOffset = circumference * (1 - progress)
 
   function handleStart() {
-    engine.start(workMins)
+    engine.start(workMins, taskLabel)
+    setTaskLabel('')
   }
 
   function handleStop() {
@@ -136,7 +137,7 @@ function Pomodoro({ mode = 'work' }) {
                 {sessions.map((s, i) => (
                   <div key={s.id || i} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: i < sessions.length - 1 ? '1px solid var(--border)' : 'none' }}>
                     <div>
-                      <div style={{ fontSize: 12, fontWeight: 600 }}>{Math.floor(s.duration / 60)}m</div>
+                      <div style={{ fontSize: 12, fontWeight: 600 }}>{Math.floor(s.duration / 60)}m{s.label ? ` · ${s.label}` : ''}</div>
                       <div style={{ fontSize: 11, color: s.interrupted ? '#ef4444' : '#22c55e' }}>
                         {s.interrupted ? 'Stopped' : 'Completed'}
                       </div>
