@@ -119,6 +119,31 @@ class HabitEngine {
     }));
   }
 
+  addHabit(name) {
+    const trimmed = name.trim().slice(0, 30);
+    if (!trimmed) return null;
+    const habit = {
+      id: this._uuid(), name: trimmed, isDefault: false,
+      type: 'manual', completions: [], streak: { current: 0, best: 0 },
+    };
+    this.habits.push(habit);
+    this.saveState();
+    return habit.id;
+  }
+
+  removeHabit(id) {
+    const habit = this.habits.find(h => h.id === id);
+    if (!habit || habit.isDefault) return false;
+    this.habits = this.habits.filter(h => h.id !== id);
+    this.saveState();
+    return true;
+  }
+
+  isDefaultHabit(id) {
+    const habit = this.habits.find(h => h.id === id);
+    return habit ? !!habit.isDefault : false;
+  }
+
   saveState() {
     localStorage.setItem('habits', JSON.stringify(this.habits));
   }
@@ -139,24 +164,24 @@ class HabitEngine {
   _initDefaults() {
     this.habits = [
       {
-        id: this._uuid(), name: 'Daily LeetCode',
+        id: this._uuid(), name: 'Daily LeetCode', isDefault: true,
         type: 'manual', completions: [], streak: { current: 0, best: 0 },
       },
       {
-        id: this._uuid(), name: 'Applications Sent',
+        id: this._uuid(), name: 'Applications Sent', isDefault: true,
         type: 'manual', completions: [], streak: { current: 0, best: 0 },
       },
       {
-        id: this._uuid(), name: 'Morning Routine',
+        id: this._uuid(), name: 'Morning Routine', isDefault: true,
         type: 'manual', completions: [], streak: { current: 0, best: 0 },
       },
       {
-        id: this._uuid(), name: 'No Phone During Pomodoro',
+        id: this._uuid(), name: 'No Phone During Pomodoro', isDefault: true,
         type: 'auto', rule: 'no_interrupted_sessions',
         completions: [], streak: { current: 0, best: 0 },
       },
       {
-        id: this._uuid(), name: 'Deep Work Completed',
+        id: this._uuid(), name: 'Deep Work Completed', isDefault: true,
         type: 'auto', rule: 'min_3_pomodoro_sessions',
         completions: [], streak: { current: 0, best: 0 },
       },

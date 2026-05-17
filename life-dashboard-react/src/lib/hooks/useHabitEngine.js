@@ -23,10 +23,22 @@ export function useHabitEngine() {
     refresh()
   }, [refresh])
 
+  const addHabit = useCallback((name) => {
+    const id = engineRef.current.addHabit(name)
+    refresh()
+    return id
+  }, [refresh])
+
+  const removeHabit = useCallback((id) => {
+    const ok = engineRef.current.removeHabit(id)
+    if (ok) refresh()
+    return ok
+  }, [refresh])
+
   const engine    = engineRef.current
   const today     = engine.getToday()
   const weekStart = engine.getWeekStart(today)
   const weekDates = engine.getWeekDates(weekStart)
 
-  return { engine, habits: engine.habits, weekDates, today, toggle, refresh }
+  return { engine, habits: engine.habits, weekDates, today, toggle, addHabit, removeHabit, refresh }
 }
