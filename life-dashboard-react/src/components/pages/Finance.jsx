@@ -1,5 +1,6 @@
 import React, { useState } from 'react'
 import { useFinanceEngine } from '../../lib/hooks/useFinanceEngine'
+import { useDebtEngine } from '../../lib/hooks/useDebtEngine'
 
 function getTodayDate() {
   const d = new Date()
@@ -73,13 +74,20 @@ const STATUS_COLOR = { ok: '#22c55e', warning: '#f97316', over: '#ef4444' }
 
 function Finance() {
   const { engine, refresh } = useFinanceEngine()
+  const { debts, addDebt, removeDebt, getTotalDebt, getTotalMonthlyPayments } = useDebtEngine()
 
   const [showForm, setShowForm] = useState(false)
   const [showBudgetForm, setShowBudgetForm] = useState(false)
+  const [showDebtForm, setShowDebtForm] = useState(false)
   const [form, setForm] = useState({ type: 'expense', amount: '', category: 'food', description: '', date: '' })
   const [budgetForm, setBudgetForm] = useState({ category: 'food', limit: '', period: 'monthly' })
+  const [debtForm, setDebtForm] = useState({ name: '', totalAmount: '', monthlyPayment: '', interestRate: '', dueDate: '' })
+  const [debtError, setDebtError] = useState('')
+  const [confirmDebtDeleteId, setConfirmDebtDeleteId] = useState(null)
 
-  const healthScore = engine.getFinancialHealthScore()
+  const totalDebt       = getTotalDebt()
+  const monthlyDebtPmts = getTotalMonthlyPayments()
+  const healthScore     = engine.getFinancialHealthScore(0, totalDebt, monthlyDebtPmts)
 
   const today      = getTodayDate()
   const monthStart = getMonthStart(today)
@@ -120,6 +128,23 @@ function Finance() {
     refresh()
   }
 
+  function handleAddDebt(e) {
+    e.preventDefault()
+    const amt = Number(debtForm.totalAmount)
+    if (!debtForm.name.trim()) { setDebtError('Name is required.'); return }
+    if (!amt || amt <= 0) { setDebtError('Amount must be a positive number.'); return }
+    addDebt(
+      debtForm.name.trim(),
+      amt,
+      Number(debtForm.monthlyPayment) || 0,
+      Number(debtForm.interestRate) || 0,
+      debtForm.dueDate || null,
+    )
+    setDebtForm({ name: '', totalAmount: '', monthlyPayment: '', interestRate: '', dueDate: '' })
+    setDebtError('')
+    setShowDebtForm(false)
+  }
+
   const inputStyle = { display: 'block', width: '100%', padding: '8px 10px', background: 'var(--s2)', border: '1px solid var(--border)', borderRadius: 8, color: 'var(--text)', fontSize: 13, marginTop: 4 }
 
   return (
@@ -139,10 +164,10 @@ function Finance() {
         <div style={{ flex: 1 }}>
           <div className="card-label" style={{ marginBottom: 10 }}>Financial Health</div>
           {[
-            { label: 'Savings Rate', value: healthScore.breakdown.savingsRate, suffix: '%' },
-            { label: 'Budget Adherence', value: healthScore.breakdown.budgetAdherence, suffix: '%' },
-            { label: 'Expense Trend', value: healthScore.breakdown.expenseTrend, suffix: '%' },
-            { label: 'Income Ratio', value: healthScore.breakdown.incomeRatio, suffix: '%' },
+            { label: 'Savings Rate', value: healthScore.breakdown.savingsRate },
+            { label: 'Budget Adherence', value: healthScore.breakdown.budgetAdherence },
+            { label: 'Debt-to-Income', value: healthScore.breakdown.debtToIncomeRatio },
+            { label: 'Net Worth Health', value: healthScore.breakdown.netWorth },
           ].map(({ label, value }) => (
             <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 5 }}>
               <span style={{ fontSize: 11, color: 'var(--muted)', width: 120, flexShrink: 0 }}>{label}</span>
@@ -245,6 +270,121 @@ function Finance() {
               <button type="button" className="btn btn-ghost" onClick={() => setShowBudgetForm(false)}>Cancel</button>
             </div>
           </form>
+        </div>
+      )}
+
+      {/* Liabilities */}
+      <div className="card" style={{ marginBottom: 24 }}>
+        <div className="card-label-row">
+          <span className="card-label">Liabilities (Debt)</span>
+          {debts.length > 0 && (
+            <span style={{ fontSize: 11, color: 'var(--muted)' }}>{debts.length} debt{debts.length > 1 ? 's' : ''}</span>
+          )}
+        </div>
+
+        {debts.length > 0 && (
+          <div style={{ display: 'flex', gap: 24, marginBottom: 16, marginTop: 4 }}>
+            <div>
+              <div style={{ fontSize: 22, fontWeight: 800, color: '#ef4444', letterSpacing: -1 }}>${totalDebt.toFixed(2)}</div>
+              <div style={{ fontSize: 11, color: 'var(--muted)' }}>Total Debt</div>
+            </div>
+            <div>
+              <div style={{ fontSize: 22, fontWeight: 800, color: 'var(--text)', letterSpacing: -1 }}>${monthlyDebtPmts.toFixed(2)}</div>
+              <div style={{ fontSize: 11, color: 'var(--muted)' }}>Monthly Payments</div>
+            </div>
+          </div>
+        )}
+
+        {debts.length === 0 && !showDebtForm && (
+          <p className="placeholder-text">No debts tracked yet.</p>
+        )}
+
+        {debts.length > 0 && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 14 }}>
+            {debts.map(debt => (
+              <div key={debt.id} style={{ display: 'grid', gridTemplateColumns: '1fr auto auto auto', gap: 12, padding: '10px 12px', background: 'rgba(239,68,68,0.07)', borderRadius: 8, alignItems: 'center' }}>
+                <div>
+                  <div style={{ fontWeight: 600, fontSize: 13 }}>{debt.name}</div>
+                  <div style={{ fontSize: 11, color: 'var(--muted)' }}>
+                    Created {debt.createdAt}{debt.interestRate ? ` · ${debt.interestRate}% APR` : ''}{debt.dueDate ? ` · Due ${debt.dueDate}` : ''}
+                  </div>
+                </div>
+                <div style={{ textAlign: 'right' }}>
+                  <div style={{ fontWeight: 700, color: '#ef4444', fontSize: 13 }}>${(debt.totalAmount - debt.paid).toFixed(2)}</div>
+                  <div style={{ fontSize: 11, color: 'var(--muted)' }}>remaining</div>
+                </div>
+                <div style={{ textAlign: 'right' }}>
+                  <div style={{ fontWeight: 600, fontSize: 13 }}>${(debt.monthlyPayment || 0).toFixed(2)}</div>
+                  <div style={{ fontSize: 11, color: 'var(--muted)' }}>/month</div>
+                </div>
+                <button
+                  onClick={() => setConfirmDebtDeleteId(debt.id)}
+                  style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', fontSize: 13, padding: '2px 4px' }}
+                  onMouseEnter={e => e.currentTarget.style.color = '#ef4444'}
+                  onMouseLeave={e => e.currentTarget.style.color = 'var(--muted)'}
+                >✕</button>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Add debt form */}
+        {showDebtForm && (
+          <form onSubmit={handleAddDebt} style={{ marginBottom: 12 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 12, marginBottom: 12 }}>
+              <label style={{ fontSize: 12, color: 'var(--muted)', gridColumn: '1/-1' }}>
+                Creditor / Name *
+                <input type="text" value={debtForm.name} onChange={e => { setDebtForm({ ...debtForm, name: e.target.value }); setDebtError('') }} placeholder='e.g. "Credit Card", "Friend Loan"' style={inputStyle} />
+              </label>
+              <label style={{ fontSize: 12, color: 'var(--muted)' }}>
+                Total Amount *
+                <input type="number" min="0.01" step="0.01" value={debtForm.totalAmount} onChange={e => { setDebtForm({ ...debtForm, totalAmount: e.target.value }); setDebtError('') }} style={inputStyle} />
+              </label>
+              <label style={{ fontSize: 12, color: 'var(--muted)' }}>
+                Monthly Payment
+                <input type="number" min="0" step="0.01" value={debtForm.monthlyPayment} onChange={e => setDebtForm({ ...debtForm, monthlyPayment: e.target.value })} placeholder="0" style={inputStyle} />
+              </label>
+              <label style={{ fontSize: 12, color: 'var(--muted)' }}>
+                Interest Rate (%)
+                <input type="number" min="0" step="0.01" value={debtForm.interestRate} onChange={e => setDebtForm({ ...debtForm, interestRate: e.target.value })} placeholder="0" style={inputStyle} />
+              </label>
+              <label style={{ fontSize: 12, color: 'var(--muted)' }}>
+                Due Date
+                <input type="date" value={debtForm.dueDate} onChange={e => setDebtForm({ ...debtForm, dueDate: e.target.value })} style={inputStyle} />
+              </label>
+            </div>
+            {debtError && <div style={{ fontSize: 12, color: '#ef4444', marginBottom: 8 }}>{debtError}</div>}
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button type="submit" className="btn btn-primary">Add Debt</button>
+              <button type="button" className="btn btn-ghost" onClick={() => { setShowDebtForm(false); setDebtError('') }}>Cancel</button>
+            </div>
+          </form>
+        )}
+
+        {!showDebtForm && (
+          <button
+            className="btn btn-ghost"
+            onClick={() => setShowDebtForm(true)}
+            style={{ borderStyle: 'dashed', color: '#ef4444', borderColor: 'rgba(239,68,68,0.4)' }}
+          >
+            + Add Debt
+          </button>
+        )}
+      </div>
+
+      {/* Delete Debt Confirmation */}
+      {confirmDebtDeleteId && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}
+          onClick={() => setConfirmDebtDeleteId(null)}>
+          <div style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 14, padding: '28px 32px', minWidth: 300 }}
+            onClick={e => e.stopPropagation()}>
+            <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--text)', marginBottom: 10 }}>Remove Debt?</div>
+            <div style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 24 }}>This will delete all tracking data for this debt.</div>
+            <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+              <button className="btn btn-ghost" onClick={() => setConfirmDebtDeleteId(null)}>No</button>
+              <button className="btn btn-primary" style={{ background: '#ef4444', borderColor: '#ef4444' }} onClick={() => { removeDebt(confirmDebtDeleteId); setConfirmDebtDeleteId(null) }}>Yes, Remove</button>
+            </div>
+          </div>
         </div>
       )}
 

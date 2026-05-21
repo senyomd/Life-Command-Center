@@ -273,50 +273,56 @@ class FinanceEngine {
 
   /**
    * Compute a 0-100 financial health score from 4 weighted factors.
-   * @returns {{ score, breakdown, health, color }}
+   * @param {number} [monthlyIncome]       — pass from debt engine for debt-aware scoring
+   * @param {number} [totalDebt]           — total outstanding debt balance
+   * @param {number} [monthlyDebtPayments] — sum of monthly debt payments
+   * @returns {{ score, breakdown, health, color, debt, monthlyDebtPayments }}
    */
-  getFinancialHealthScore() {
-    const today = FinanceEngine.getTodayDate();
-    const thisWeekStart = FinanceEngine.getWeekStart(today);
-
-    // Last week date range
-    const thisWeekStartDate = new Date(thisWeekStart + 'T12:00:00');
-    const lastWeekEndDate = new Date(thisWeekStartDate);
-    lastWeekEndDate.setDate(lastWeekEndDate.getDate() - 1);
-    const lastWeekStartDate = new Date(lastWeekEndDate);
-    lastWeekStartDate.setDate(lastWeekStartDate.getDate() - 6);
-    const lastWeekEnd   = FinanceEngine._fmtDate(lastWeekEndDate);
-    const lastWeekStart = FinanceEngine._fmtDate(lastWeekStartDate);
-
-    // Factor 1: Savings Rate (40%)
+  getFinancialHealthScore(monthlyIncome = 0, totalDebt = 0, monthlyDebtPayments = 0) {
+    // Factor 1: Savings Rate (35%)
     const totals = this.getTotals();
     const savingsRate  = totals.income > 0
       ? ((totals.income - totals.expenses) / totals.income) * 100
       : 0;
     const savingsScore = Math.max(0, Math.min(100, savingsRate));
 
-    // Factor 2: Budget Adherence (30%)
+    // Factor 2: Budget Adherence (20%)
     const budgetScore = this._calcBudgetAdherence();
 
-    // Factor 3: Expense Trend (20%)
-    const thisWeekTxns = this.getTransactions({ sinceDate: thisWeekStart, untilDate: today });
-    const lastWeekTxns = this.getTransactions({ sinceDate: lastWeekStart, untilDate: lastWeekEnd });
-    const trendScore   = this._calcExpenseTrend(thisWeekTxns, lastWeekTxns);
+    // Factor 3: Debt-to-Income Ratio (25%) — 100 = no debt burden, 0 = payments exceed income
+    const refIncome = monthlyIncome || totals.income;
+    const debtToIncomeRatio = refIncome > 0
+      ? Math.max(0, 100 - (monthlyDebtPayments / refIncome) * 100)
+      : 50;
 
-    // Factor 4: Income-to-Expense Ratio (10%)
-    const incomeRatio = totals.income > totals.expenses ? 100
-      : totals.income === totals.expenses ? 50
-      : 0;
+    // Factor 4: Net Worth Health (20%) — income covers debt payments = healthy
+    const netWorthScore = refIncome > monthlyDebtPayments ? 100 : 50;
 
-    const raw   = (savingsScore * 0.40) + (budgetScore * 0.30) + (trendScore * 0.20) + (incomeRatio * 0.10);
+    const raw   = (savingsScore * 0.35) + (budgetScore * 0.20) + (debtToIncomeRatio * 0.25) + (netWorthScore * 0.20);
     const score = Math.max(0, Math.min(100, Math.round(raw)));
 
     return {
       score,
-      breakdown: { savingsRate: savingsScore, budgetAdherence: budgetScore, expenseTrend: trendScore, incomeRatio },
+      breakdown: { savingsRate: savingsScore, budgetAdherence: budgetScore, debtToIncomeRatio, netWorth: netWorthScore },
       health: this._healthStatus(score),
       color:  this._healthColor(score),
+      debt: totalDebt,
+      monthlyDebtPayments,
     };
+  }
+
+  /**
+   * Free cash flow after expenses and debt payments.
+   */
+  getFreeCashFlow(monthlyIncome, monthlyExpenses, monthlyDebtPayments) {
+    return Math.round((monthlyIncome - monthlyExpenses - monthlyDebtPayments) * 100) / 100;
+  }
+
+  /**
+   * Net worth = total assets minus total debt.
+   */
+  getNetWorth(totalAssets, totalDebt) {
+    return Math.round((totalAssets - totalDebt) * 100) / 100;
   }
 
   _calcBudgetAdherence() {
