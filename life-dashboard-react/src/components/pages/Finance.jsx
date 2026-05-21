@@ -74,7 +74,7 @@ const STATUS_COLOR = { ok: '#22c55e', warning: '#f97316', over: '#ef4444' }
 
 function Finance() {
   const { engine, refresh } = useFinanceEngine()
-  const { debts, addDebt, removeDebt, getTotalDebt, getTotalMonthlyPayments } = useDebtEngine()
+  const { debts, addDebt, removeDebt, getTotalDebt, getTotalMonthlyPayments, getDebtPayoffTimeline } = useDebtEngine()
 
   const [showForm, setShowForm] = useState(false)
   const [showBudgetForm, setShowBudgetForm] = useState(false)
@@ -85,10 +85,6 @@ function Finance() {
   const [debtError, setDebtError] = useState('')
   const [confirmDebtDeleteId, setConfirmDebtDeleteId] = useState(null)
 
-  const totalDebt       = getTotalDebt()
-  const monthlyDebtPmts = getTotalMonthlyPayments()
-  const healthScore     = engine.getFinancialHealthScore(0, totalDebt, monthlyDebtPmts)
-
   const today      = getTodayDate()
   const monthStart = getMonthStart(today)
   const totals     = engine.getTotals({ sinceDate: monthStart, untilDate: today })
@@ -98,6 +94,18 @@ function Finance() {
     .map(([category, value]) => ({ category, value }))
     .sort((a, b) => b.value - a.value)
   const budgets    = engine.getBudgets()
+
+  const totalDebt       = getTotalDebt()
+  const monthlyDebtPmts = getTotalMonthlyPayments()
+  const freeCashFlow    = totals.income - totals.expenses - monthlyDebtPmts
+  const healthScore     = engine.getFinancialHealthScore(totals.income, totalDebt, monthlyDebtPmts)
+
+  // Cash flow bar segment percentages
+  const income = totals.income || 1 // avoid division by zero in bar
+  const expPct  = Math.min((totals.expenses / income) * 100, 100)
+  const debtPct = Math.min((monthlyDebtPmts / income) * 100, Math.max(0, 100 - expPct))
+  const fcfPct  = Math.max(0, 100 - expPct - debtPct)
+  const fcfColor = freeCashFlow >= 0 ? '#22c55e' : '#ef4444'
 
   function handleAdd(e) {
     e.preventDefault()
@@ -152,10 +160,197 @@ function Finance() {
       <div className="page-header">
         <div className="page-eyebrow">Finance</div>
         <h1 className="page-title">Finance Tracker</h1>
-        <p className="page-sub">This month's income, expenses, and budget health</p>
+        <p className="page-sub">Cash flow, debt, and budget health — this month</p>
       </div>
 
-      {/* Financial Health Score */}
+      {/* ── CASH FLOW HERO ───────────────────────────────────────── */}
+      <div className="card" style={{ marginBottom: 24, padding: '24px 28px', background: `linear-gradient(135deg, ${fcfColor}10, var(--s1))`, borderColor: `${fcfColor}35` }}>
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 32, flexWrap: 'wrap' }}>
+          <div style={{ flexShrink: 0 }}>
+            <div className="card-label" style={{ marginBottom: 6 }}>Free Cash Flow</div>
+            <div style={{ fontSize: 52, fontWeight: 900, lineHeight: 1, color: fcfColor, letterSpacing: -2 }}>
+              {freeCashFlow >= 0 ? '' : '-'}{fmt(freeCashFlow)}
+            </div>
+            <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 8 }}>
+              {totals.income > 0
+                ? `${Math.max(0, (freeCashFlow / totals.income) * 100).toFixed(0)}% of income available`
+                : 'No income recorded'}
+            </div>
+          </div>
+
+          <div style={{ flex: 1, minWidth: 220 }}>
+            {/* Flow breakdown labels */}
+            <div style={{ display: 'flex', gap: 12, marginBottom: 10, flexWrap: 'wrap' }}>
+              {[
+                { label: 'Income', value: totals.income, color: '#22c55e' },
+                { label: 'Expenses', value: totals.expenses, color: '#f97316' },
+                { label: 'Debt Pmts', value: monthlyDebtPmts, color: '#ef4444' },
+                { label: 'Free', value: Math.abs(freeCashFlow), color: fcfColor },
+              ].map(({ label, value, color }) => (
+                <div key={label} style={{ textAlign: 'center', minWidth: 60 }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, color }}>{fmt(value)}</div>
+                  <div style={{ fontSize: 10, color: 'var(--muted)', marginTop: 2 }}>{label}</div>
+                </div>
+              ))}
+            </div>
+
+            {/* Stacked flow bar */}
+            <div style={{ height: 10, borderRadius: 6, overflow: 'hidden', background: 'var(--s3)', display: 'flex' }}>
+              <div style={{ width: `${expPct}%`, background: '#f97316', transition: 'width 0.4s ease' }} />
+              <div style={{ width: `${debtPct}%`, background: '#ef4444', transition: 'width 0.4s ease' }} />
+              <div style={{ width: `${fcfPct}%`, background: '#22c55e', transition: 'width 0.4s ease' }} />
+            </div>
+            <div style={{ display: 'flex', gap: 14, marginTop: 6 }}>
+              {[
+                { label: 'Expenses', color: '#f97316' },
+                { label: 'Debt', color: '#ef4444' },
+                { label: 'Free Cash', color: '#22c55e' },
+              ].map(({ label, color }) => (
+                <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                  <div style={{ width: 7, height: 7, borderRadius: 2, background: color, flexShrink: 0 }} />
+                  <span style={{ fontSize: 10, color: 'var(--muted)' }}>{label}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ── LIABILITIES (DEBT) ──────────────────────────────────── */}
+      <div className="card" style={{ marginBottom: 24 }}>
+        <div className="card-label-row">
+          <span className="card-label">Liabilities (Debt)</span>
+          {debts.length > 0 && (
+            <span style={{ fontSize: 11, color: 'var(--muted)' }}>{debts.length} debt{debts.length > 1 ? 's' : ''}</span>
+          )}
+        </div>
+
+        {debts.length > 0 && (
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16, marginTop: 4 }}>
+            <div>
+              <div style={{ fontSize: 24, fontWeight: 800, color: '#ef4444', letterSpacing: -1 }}>${totalDebt.toFixed(2)}</div>
+              <div style={{ fontSize: 12, color: 'var(--muted)' }}>Total Debt</div>
+            </div>
+            <div>
+              <div style={{ fontSize: 24, fontWeight: 800, color: '#ef4444', letterSpacing: -1 }}>${monthlyDebtPmts.toFixed(2)}</div>
+              <div style={{ fontSize: 12, color: 'var(--muted)' }}>Monthly Payments</div>
+            </div>
+          </div>
+        )}
+
+        {debts.length === 0 && !showDebtForm && (
+          <p className="placeholder-text">No debts tracked yet.</p>
+        )}
+
+        {debts.length > 0 && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 14 }}>
+            {debts.map(debt => {
+              const months = getDebtPayoffTimeline(debt.id)
+              const payoffLabel = months === null ? 'N/A' : months === 0 ? 'Paid off' : `${months} mo`
+              return (
+                <div key={debt.id} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr auto', gap: 12, padding: '12px', background: 'rgba(239,68,68,0.07)', borderRadius: 8, alignItems: 'center' }}>
+                  <div>
+                    <div style={{ fontWeight: 600, fontSize: 13 }}>{debt.name}</div>
+                    <div style={{ fontSize: 11, color: 'var(--muted)' }}>
+                      {debt.dueDate ? `Due: ${debt.dueDate}` : `Created: ${debt.createdAt}`}
+                      {debt.interestRate ? ` · ${debt.interestRate}% APR` : ''}
+                    </div>
+                  </div>
+                  <div>
+                    <div style={{ fontWeight: 600, color: '#ef4444', fontSize: 13 }}>${(debt.totalAmount - debt.paid).toFixed(2)}</div>
+                    <div style={{ fontSize: 11, color: 'var(--muted)' }}>remaining</div>
+                  </div>
+                  <div>
+                    <div style={{ fontWeight: 600, fontSize: 13 }}>${(debt.monthlyPayment || 0).toFixed(2)}/mo</div>
+                    <div style={{ fontSize: 11, color: 'var(--muted)' }}>{payoffLabel}</div>
+                  </div>
+                  <button
+                    onClick={() => setConfirmDebtDeleteId(debt.id)}
+                    style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', fontSize: 13, padding: '2px 4px' }}
+                    onMouseEnter={e => e.currentTarget.style.color = '#ef4444'}
+                    onMouseLeave={e => e.currentTarget.style.color = 'var(--muted)'}
+                  >✕</button>
+                </div>
+              )
+            })}
+          </div>
+        )}
+
+        {showDebtForm && (
+          <form onSubmit={handleAddDebt} style={{ marginBottom: 12 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 12, marginBottom: 12 }}>
+              <label style={{ fontSize: 12, color: 'var(--muted)', gridColumn: '1/-1' }}>
+                Creditor / Name *
+                <input type="text" value={debtForm.name} onChange={e => { setDebtForm({ ...debtForm, name: e.target.value }); setDebtError('') }} placeholder='e.g. "Credit Card", "Friend Loan"' style={inputStyle} />
+              </label>
+              <label style={{ fontSize: 12, color: 'var(--muted)' }}>
+                Total Amount *
+                <input type="number" min="0.01" step="0.01" value={debtForm.totalAmount} onChange={e => { setDebtForm({ ...debtForm, totalAmount: e.target.value }); setDebtError('') }} style={inputStyle} />
+              </label>
+              <label style={{ fontSize: 12, color: 'var(--muted)' }}>
+                Monthly Payment
+                <input type="number" min="0" step="0.01" value={debtForm.monthlyPayment} onChange={e => setDebtForm({ ...debtForm, monthlyPayment: e.target.value })} placeholder="0" style={inputStyle} />
+              </label>
+              <label style={{ fontSize: 12, color: 'var(--muted)' }}>
+                Interest Rate (%)
+                <input type="number" min="0" step="0.01" value={debtForm.interestRate} onChange={e => setDebtForm({ ...debtForm, interestRate: e.target.value })} placeholder="0" style={inputStyle} />
+              </label>
+              <label style={{ fontSize: 12, color: 'var(--muted)' }}>
+                Due Date
+                <input type="date" value={debtForm.dueDate} onChange={e => setDebtForm({ ...debtForm, dueDate: e.target.value })} style={inputStyle} />
+              </label>
+            </div>
+            {debtError && <div style={{ fontSize: 12, color: '#ef4444', marginBottom: 8 }}>{debtError}</div>}
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button type="submit" className="btn btn-primary">Add Debt</button>
+              <button type="button" className="btn btn-ghost" onClick={() => { setShowDebtForm(false); setDebtError('') }}>Cancel</button>
+            </div>
+          </form>
+        )}
+
+        {!showDebtForm && (
+          <button
+            className="btn btn-ghost"
+            onClick={() => setShowDebtForm(true)}
+            style={{ borderStyle: 'dashed', color: '#ef4444', borderColor: 'rgba(239,68,68,0.4)' }}
+          >
+            + Add Debt
+          </button>
+        )}
+      </div>
+
+      {/* Delete Debt Confirmation */}
+      {confirmDebtDeleteId && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}
+          onClick={() => setConfirmDebtDeleteId(null)}>
+          <div style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 14, padding: '28px 32px', minWidth: 300 }}
+            onClick={e => e.stopPropagation()}>
+            <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--text)', marginBottom: 10 }}>Remove Debt?</div>
+            <div style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 24 }}>This will delete all tracking data for this debt.</div>
+            <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+              <button className="btn btn-ghost" onClick={() => setConfirmDebtDeleteId(null)}>No</button>
+              <button className="btn btn-primary" style={{ background: '#ef4444', borderColor: '#ef4444' }} onClick={() => { removeDebt(confirmDebtDeleteId); setConfirmDebtDeleteId(null) }}>Yes, Remove</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── SUMMARY CARDS ───────────────────────────────────────── */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14, marginBottom: 24 }}>
+        {[
+          { label: 'Income', value: fmt(totals.income), color: '#22c55e' },
+          { label: 'Expenses', value: fmt(totals.expenses), color: '#ef4444' },
+          { label: 'Net', value: `${totals.net >= 0 ? '+' : ''}${fmt(totals.net)}`, color: totals.net >= 0 ? '#22c55e' : '#ef4444' },
+          { label: 'Savings Rate', value: totals.savingsRate !== null ? `${totals.savingsRate.toFixed(1)}%` : '—', color: totals.savingsRate !== null && totals.savingsRate >= 0 ? '#22c55e' : 'var(--text)' },
+        ].map(({ label, value, color }) => (
+          <div key={label} className="card" style={{ textAlign: 'center', padding: 16 }}>
+            <div className="card-label">{label}</div>
+            <div style={{ fontSize: 24, fontWeight: 800, color, letterSpacing: -1 }}>{value}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* ── FINANCIAL HEALTH SCORE ──────────────────────────────── */}
       <div className="card" style={{ marginBottom: 24, display: 'flex', alignItems: 'center', gap: 28, padding: '20px 24px', background: `linear-gradient(135deg, ${healthScore.color}12, var(--s1))`, borderColor: `${healthScore.color}40` }}>
         <div style={{ textAlign: 'center', flexShrink: 0 }}>
           <div style={{ fontSize: 52, fontWeight: 900, lineHeight: 1, color: healthScore.color, letterSpacing: -2 }}>{healthScore.score}</div>
@@ -177,25 +372,15 @@ function Finance() {
               <span style={{ fontSize: 11, color: 'var(--muted-aa)', width: 32, textAlign: 'right' }}>{Math.round(value)}</span>
             </div>
           ))}
+          <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 8, lineHeight: 1.5 }}>
+            Savings: {healthScore.breakdown.savingsRate.toFixed(0)}% &nbsp;·&nbsp;
+            Debt Ratio: {healthScore.breakdown.debtToIncomeRatio.toFixed(0)}% &nbsp;·&nbsp;
+            Net Worth: {healthScore.breakdown.netWorth > 50 ? '✓ Healthy' : '✗ At Risk'}
+          </div>
         </div>
       </div>
 
-      {/* Summary cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14, marginBottom: 24 }}>
-        {[
-          { label: 'Income', value: fmt(totals.income),   color: '#22c55e' },
-          { label: 'Expenses', value: fmt(totals.expenses), color: '#ef4444' },
-          { label: 'Net',   value: `${totals.net >= 0 ? '+' : ''}${fmt(totals.net)}`, color: totals.net >= 0 ? '#22c55e' : '#ef4444' },
-          { label: 'Savings Rate', value: totals.savingsRate !== null ? `${totals.savingsRate.toFixed(1)}%` : '—', color: totals.savingsRate !== null && totals.savingsRate >= 0 ? '#22c55e' : 'var(--text)' },
-        ].map(({ label, value, color }) => (
-          <div key={label} className="card" style={{ textAlign: 'center', padding: 16 }}>
-            <div className="card-label">{label}</div>
-            <div style={{ fontSize: 24, fontWeight: 800, color, letterSpacing: -1 }}>{value}</div>
-          </div>
-        ))}
-      </div>
-
-      {/* Action row */}
+      {/* ── ACTION ROW ──────────────────────────────────────────── */}
       <div style={{ display: 'flex', gap: 10, marginBottom: 24 }}>
         <button className="btn btn-primary" onClick={() => setShowForm(!showForm)}>+ Add Transaction</button>
         <button className="btn btn-secondary" onClick={() => setShowBudgetForm(!showBudgetForm)}>⚙ Set Budget</button>
@@ -273,121 +458,7 @@ function Finance() {
         </div>
       )}
 
-      {/* Liabilities */}
-      <div className="card" style={{ marginBottom: 24 }}>
-        <div className="card-label-row">
-          <span className="card-label">Liabilities (Debt)</span>
-          {debts.length > 0 && (
-            <span style={{ fontSize: 11, color: 'var(--muted)' }}>{debts.length} debt{debts.length > 1 ? 's' : ''}</span>
-          )}
-        </div>
-
-        {debts.length > 0 && (
-          <div style={{ display: 'flex', gap: 24, marginBottom: 16, marginTop: 4 }}>
-            <div>
-              <div style={{ fontSize: 22, fontWeight: 800, color: '#ef4444', letterSpacing: -1 }}>${totalDebt.toFixed(2)}</div>
-              <div style={{ fontSize: 11, color: 'var(--muted)' }}>Total Debt</div>
-            </div>
-            <div>
-              <div style={{ fontSize: 22, fontWeight: 800, color: 'var(--text)', letterSpacing: -1 }}>${monthlyDebtPmts.toFixed(2)}</div>
-              <div style={{ fontSize: 11, color: 'var(--muted)' }}>Monthly Payments</div>
-            </div>
-          </div>
-        )}
-
-        {debts.length === 0 && !showDebtForm && (
-          <p className="placeholder-text">No debts tracked yet.</p>
-        )}
-
-        {debts.length > 0 && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 14 }}>
-            {debts.map(debt => (
-              <div key={debt.id} style={{ display: 'grid', gridTemplateColumns: '1fr auto auto auto', gap: 12, padding: '10px 12px', background: 'rgba(239,68,68,0.07)', borderRadius: 8, alignItems: 'center' }}>
-                <div>
-                  <div style={{ fontWeight: 600, fontSize: 13 }}>{debt.name}</div>
-                  <div style={{ fontSize: 11, color: 'var(--muted)' }}>
-                    Created {debt.createdAt}{debt.interestRate ? ` · ${debt.interestRate}% APR` : ''}{debt.dueDate ? ` · Due ${debt.dueDate}` : ''}
-                  </div>
-                </div>
-                <div style={{ textAlign: 'right' }}>
-                  <div style={{ fontWeight: 700, color: '#ef4444', fontSize: 13 }}>${(debt.totalAmount - debt.paid).toFixed(2)}</div>
-                  <div style={{ fontSize: 11, color: 'var(--muted)' }}>remaining</div>
-                </div>
-                <div style={{ textAlign: 'right' }}>
-                  <div style={{ fontWeight: 600, fontSize: 13 }}>${(debt.monthlyPayment || 0).toFixed(2)}</div>
-                  <div style={{ fontSize: 11, color: 'var(--muted)' }}>/month</div>
-                </div>
-                <button
-                  onClick={() => setConfirmDebtDeleteId(debt.id)}
-                  style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', fontSize: 13, padding: '2px 4px' }}
-                  onMouseEnter={e => e.currentTarget.style.color = '#ef4444'}
-                  onMouseLeave={e => e.currentTarget.style.color = 'var(--muted)'}
-                >✕</button>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* Add debt form */}
-        {showDebtForm && (
-          <form onSubmit={handleAddDebt} style={{ marginBottom: 12 }}>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 12, marginBottom: 12 }}>
-              <label style={{ fontSize: 12, color: 'var(--muted)', gridColumn: '1/-1' }}>
-                Creditor / Name *
-                <input type="text" value={debtForm.name} onChange={e => { setDebtForm({ ...debtForm, name: e.target.value }); setDebtError('') }} placeholder='e.g. "Credit Card", "Friend Loan"' style={inputStyle} />
-              </label>
-              <label style={{ fontSize: 12, color: 'var(--muted)' }}>
-                Total Amount *
-                <input type="number" min="0.01" step="0.01" value={debtForm.totalAmount} onChange={e => { setDebtForm({ ...debtForm, totalAmount: e.target.value }); setDebtError('') }} style={inputStyle} />
-              </label>
-              <label style={{ fontSize: 12, color: 'var(--muted)' }}>
-                Monthly Payment
-                <input type="number" min="0" step="0.01" value={debtForm.monthlyPayment} onChange={e => setDebtForm({ ...debtForm, monthlyPayment: e.target.value })} placeholder="0" style={inputStyle} />
-              </label>
-              <label style={{ fontSize: 12, color: 'var(--muted)' }}>
-                Interest Rate (%)
-                <input type="number" min="0" step="0.01" value={debtForm.interestRate} onChange={e => setDebtForm({ ...debtForm, interestRate: e.target.value })} placeholder="0" style={inputStyle} />
-              </label>
-              <label style={{ fontSize: 12, color: 'var(--muted)' }}>
-                Due Date
-                <input type="date" value={debtForm.dueDate} onChange={e => setDebtForm({ ...debtForm, dueDate: e.target.value })} style={inputStyle} />
-              </label>
-            </div>
-            {debtError && <div style={{ fontSize: 12, color: '#ef4444', marginBottom: 8 }}>{debtError}</div>}
-            <div style={{ display: 'flex', gap: 8 }}>
-              <button type="submit" className="btn btn-primary">Add Debt</button>
-              <button type="button" className="btn btn-ghost" onClick={() => { setShowDebtForm(false); setDebtError('') }}>Cancel</button>
-            </div>
-          </form>
-        )}
-
-        {!showDebtForm && (
-          <button
-            className="btn btn-ghost"
-            onClick={() => setShowDebtForm(true)}
-            style={{ borderStyle: 'dashed', color: '#ef4444', borderColor: 'rgba(239,68,68,0.4)' }}
-          >
-            + Add Debt
-          </button>
-        )}
-      </div>
-
-      {/* Delete Debt Confirmation */}
-      {confirmDebtDeleteId && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}
-          onClick={() => setConfirmDebtDeleteId(null)}>
-          <div style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 14, padding: '28px 32px', minWidth: 300 }}
-            onClick={e => e.stopPropagation()}>
-            <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--text)', marginBottom: 10 }}>Remove Debt?</div>
-            <div style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 24 }}>This will delete all tracking data for this debt.</div>
-            <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
-              <button className="btn btn-ghost" onClick={() => setConfirmDebtDeleteId(null)}>No</button>
-              <button className="btn btn-primary" style={{ background: '#ef4444', borderColor: '#ef4444' }} onClick={() => { removeDebt(confirmDebtDeleteId); setConfirmDebtDeleteId(null) }}>Yes, Remove</button>
-            </div>
-          </div>
-        </div>
-      )}
-
+      {/* ── TRANSACTIONS + BREAKDOWN + BUDGETS ──────────────────── */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
         {/* Transactions */}
         <div className="card">

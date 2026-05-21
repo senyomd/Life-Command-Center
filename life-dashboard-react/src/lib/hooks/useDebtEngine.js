@@ -31,5 +31,6 @@ export function useDebtEngine() {
     getTotalDebt: () => engine.getTotalDebt(),
     getTotalMonthlyPayments: () => engine.getTotalMonthlyPayments(),
     getDebtToIncomeRatio: (income) => engine.getDebtToIncomeRatio(income),
+    getDebtPayoffTimeline: (id) => engine.getDebtPayoffTimeline(id),
   }
 }

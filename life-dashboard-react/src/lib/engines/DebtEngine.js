@@ -57,6 +57,19 @@ class DebtEngine {
     return Math.round(this.debts.reduce((sum, d) => sum + (d.monthlyPayment || 0), 0) * 100) / 100;
   }
 
+  // Returns months to payoff, or null if no payment / payment can't cover interest
+  getDebtPayoffTimeline(id) {
+    const debt = this.debts.find(d => d.id === id);
+    if (!debt || !debt.monthlyPayment || debt.monthlyPayment <= 0) return null;
+    const remaining = debt.totalAmount - debt.paid;
+    if (remaining <= 0) return 0;
+    const r = (debt.interestRate || 0) / 100 / 12;
+    if (r === 0) return Math.ceil(remaining / debt.monthlyPayment);
+    const interestPerMonth = r * remaining;
+    if (debt.monthlyPayment <= interestPerMonth) return null;
+    return Math.ceil(-Math.log(1 - (r * remaining) / debt.monthlyPayment) / Math.log(1 + r));
+  }
+
   getDebtToIncomeRatio(monthlyIncome) {
     if (!monthlyIncome || monthlyIncome === 0) return 0;
     return (this.getTotalMonthlyPayments() / monthlyIncome) * 100;
