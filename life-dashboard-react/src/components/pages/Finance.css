@@ -33,7 +33,7 @@
 /* SPLIT VIEW */
 .split-view {
   display: grid;
-  grid-template-columns: 1fr 1px 1fr;
+  grid-template-columns: 1fr 1fr;
   gap: 0 40px;
 }
 
@@ -44,12 +44,12 @@
 
 /* Divider between columns */
 .split-view > .column:first-child {
-  padding-right: 40px;
+  padding-right: 20px;
   border-right: 1px solid var(--border);
 }
 
 .split-view > .column:last-child {
-  padding-left: 0;
+  padding-left: 20px;
 }
 
 /* COLUMN */
