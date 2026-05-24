@@ -1,5 +1,16 @@
 # Changelog
 
+## v1.0.3 — Input Validation
+
+- **Added**: Inline validation errors for invalid input
+- **Impact**: Users get immediate feedback on form errors
+- **Files Changed**: Finance.jsx, Finance.css
+- **Why**: Prevents silent failures and clarifies what went wrong
+- **Validation Rules**:
+  - Item name: Required, non-empty
+  - Amount: Must be a number greater than $0
+- **Error Display**: Red alert message below form with clear feedback
+
 ## v1.0.2 — Keyboard Navigation
 
 - **Added**: Escape key support to close/cancel input forms

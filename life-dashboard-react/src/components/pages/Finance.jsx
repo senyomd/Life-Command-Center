@@ -14,18 +14,26 @@ export default function Finance() {
   const [incomeAmount, setIncomeAmount] = useState('')
   const [expenseName, setExpenseName]   = useState('')
   const [expenseAmount, setExpenseAmount] = useState('')
+  const [incomeError, setIncomeError]   = useState('')
+  const [expenseError, setExpenseError] = useState('')
 
   function handleAddIncome() {
-    if (!incomeName.trim() || !incomeAmount) return
-    addIncome(incomeName.trim(), parseFloat(incomeAmount))
+    setIncomeError('')
+    if (!incomeName.trim()) { setIncomeError('Item name is required'); return }
+    const amount = parseFloat(incomeAmount)
+    if (isNaN(amount) || amount <= 0) { setIncomeError('Amount must be greater than $0'); return }
+    addIncome(incomeName.trim(), amount)
     setIncomeName('')
     setIncomeAmount('')
     setShowIncomeInput(false)
   }
 
   function handleAddExpense() {
-    if (!expenseName.trim() || !expenseAmount) return
-    addExpense(expenseName.trim(), parseFloat(expenseAmount))
+    setExpenseError('')
+    if (!expenseName.trim()) { setExpenseError('Item name is required'); return }
+    const amount = parseFloat(expenseAmount)
+    if (isNaN(amount) || amount <= 0) { setExpenseError('Amount must be greater than $0'); return }
+    addExpense(expenseName.trim(), amount)
     setExpenseName('')
     setExpenseAmount('')
     setShowExpenseInput(false)
@@ -35,12 +43,14 @@ export default function Finance() {
     setShowIncomeInput(false)
     setIncomeName('')
     setIncomeAmount('')
+    setIncomeError('')
   }
 
   function closeExpenseInput() {
     setShowExpenseInput(false)
     setExpenseName('')
     setExpenseAmount('')
+    setExpenseError('')
   }
 
   const netWorth = getNetWorth()
@@ -66,26 +76,29 @@ export default function Finance() {
           </div>
 
           {showIncomeInput && (
-            <div className="inline-input">
-              <input
-                autoFocus
-                type="text"
-                placeholder="Name"
-                value={incomeName}
-                onChange={e => setIncomeName(e.target.value)}
-                onKeyDown={e => { if (e.key === 'Enter') handleAddIncome(); else if (e.key === 'Escape') closeIncomeInput() }}
-              />
-              <input
-                type="number"
-                placeholder="Amount"
-                min="0.01"
-                step="0.01"
-                value={incomeAmount}
-                onChange={e => setIncomeAmount(e.target.value)}
-                onKeyDown={e => { if (e.key === 'Enter') handleAddIncome(); else if (e.key === 'Escape') closeIncomeInput() }}
-              />
-              <button onClick={handleAddIncome}>Save</button>
-            </div>
+            <>
+              <div className="inline-input">
+                <input
+                  autoFocus
+                  type="text"
+                  placeholder="Name"
+                  value={incomeName}
+                  onChange={e => { setIncomeName(e.target.value); setIncomeError('') }}
+                  onKeyDown={e => { if (e.key === 'Enter') handleAddIncome(); else if (e.key === 'Escape') closeIncomeInput() }}
+                />
+                <input
+                  type="number"
+                  placeholder="Amount"
+                  min="0.01"
+                  step="0.01"
+                  value={incomeAmount}
+                  onChange={e => { setIncomeAmount(e.target.value); setIncomeError('') }}
+                  onKeyDown={e => { if (e.key === 'Enter') handleAddIncome(); else if (e.key === 'Escape') closeIncomeInput() }}
+                />
+                <button onClick={handleAddIncome}>Save</button>
+              </div>
+              {incomeError && <div className="error-message">{incomeError}</div>}
+            </>
           )}
 
           <div className="items-list">
@@ -114,26 +127,29 @@ export default function Finance() {
           </div>
 
           {showExpenseInput && (
-            <div className="inline-input">
-              <input
-                autoFocus
-                type="text"
-                placeholder="Name"
-                value={expenseName}
-                onChange={e => setExpenseName(e.target.value)}
-                onKeyDown={e => { if (e.key === 'Enter') handleAddExpense(); else if (e.key === 'Escape') closeExpenseInput() }}
-              />
-              <input
-                type="number"
-                placeholder="Amount"
-                min="0.01"
-                step="0.01"
-                value={expenseAmount}
-                onChange={e => setExpenseAmount(e.target.value)}
-                onKeyDown={e => { if (e.key === 'Enter') handleAddExpense(); else if (e.key === 'Escape') closeExpenseInput() }}
-              />
-              <button onClick={handleAddExpense}>Save</button>
-            </div>
+            <>
+              <div className="inline-input">
+                <input
+                  autoFocus
+                  type="text"
+                  placeholder="Name"
+                  value={expenseName}
+                  onChange={e => { setExpenseName(e.target.value); setExpenseError('') }}
+                  onKeyDown={e => { if (e.key === 'Enter') handleAddExpense(); else if (e.key === 'Escape') closeExpenseInput() }}
+                />
+                <input
+                  type="number"
+                  placeholder="Amount"
+                  min="0.01"
+                  step="0.01"
+                  value={expenseAmount}
+                  onChange={e => { setExpenseAmount(e.target.value); setExpenseError('') }}
+                  onKeyDown={e => { if (e.key === 'Enter') handleAddExpense(); else if (e.key === 'Escape') closeExpenseInput() }}
+                />
+                <button onClick={handleAddExpense}>Save</button>
+              </div>
+              {expenseError && <div className="error-message">{expenseError}</div>}
+            </>
           )}
 
           <div className="items-list">
