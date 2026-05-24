@@ -1,5 +1,17 @@
 # Changelog
 
+## v1.1.3 — Focus Score Visual Feedback
+
+- **Added**: Color-coded focus score gradient
+- **Impact**: Instantly communicates health status without reading numbers
+- **Files Changed**: Home.jsx
+- **Why**: Colors trigger immediate intuitive understanding (red=bad, green=good)
+- **Scale**:
+  - Red: <40 (Needs Work)
+  - Yellow: 40–60 (Fair)
+  - Blue: 60–80 (Healthy)
+  - Green: 80+ (Excellent)
+
 ## v1.1.2 — Habit Streak Celebration
 
 - **Added**: Fire emoji (🔥) to active habit streaks

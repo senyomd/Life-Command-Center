@@ -47,9 +47,17 @@ function Home() {
   const deltas = comparison?.deltas ?? {}
 
   function scoreColor(score) {
-    if (score >= 80) return '#22c55e'
-    if (score >= 55) return '#f97316'
-    return '#ef4444'
+    if (score >= 80) return '#22c55e' // Excellent
+    if (score >= 60) return '#3b82f6' // Healthy
+    if (score >= 40) return '#eab308' // Fair
+    return '#ef4444'                  // Needs Work
+  }
+
+  function scoreStatus(score) {
+    if (score >= 80) return 'Excellent'
+    if (score >= 60) return 'Healthy'
+    if (score >= 40) return 'Fair'
+    return 'Needs Work'
   }
 
   function handleAddSubmit() {
@@ -97,7 +105,7 @@ function Home() {
         <MetricCard
           label="Focus Score"
           value={`${focusScore.toFixed(0)}%`}
-          sub="This week"
+          sub={scoreStatus(focusScore)}
           color={scoreColor(focusScore)}
           delta={deltas.focusScore}
         />
