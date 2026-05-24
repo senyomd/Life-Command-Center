@@ -31,6 +31,18 @@ export default function Finance() {
     setShowExpenseInput(false)
   }
 
+  function closeIncomeInput() {
+    setShowIncomeInput(false)
+    setIncomeName('')
+    setIncomeAmount('')
+  }
+
+  function closeExpenseInput() {
+    setShowExpenseInput(false)
+    setExpenseName('')
+    setExpenseAmount('')
+  }
+
   const netWorth = getNetWorth()
 
   return (
@@ -61,7 +73,7 @@ export default function Finance() {
                 placeholder="Name"
                 value={incomeName}
                 onChange={e => setIncomeName(e.target.value)}
-                onKeyDown={e => e.key === 'Enter' && handleAddIncome()}
+                onKeyDown={e => { if (e.key === 'Enter') handleAddIncome(); else if (e.key === 'Escape') closeIncomeInput() }}
               />
               <input
                 type="number"
@@ -70,7 +82,7 @@ export default function Finance() {
                 step="0.01"
                 value={incomeAmount}
                 onChange={e => setIncomeAmount(e.target.value)}
-                onKeyDown={e => e.key === 'Enter' && handleAddIncome()}
+                onKeyDown={e => { if (e.key === 'Enter') handleAddIncome(); else if (e.key === 'Escape') closeIncomeInput() }}
               />
               <button onClick={handleAddIncome}>Save</button>
             </div>
@@ -109,7 +121,7 @@ export default function Finance() {
                 placeholder="Name"
                 value={expenseName}
                 onChange={e => setExpenseName(e.target.value)}
-                onKeyDown={e => e.key === 'Enter' && handleAddExpense()}
+                onKeyDown={e => { if (e.key === 'Enter') handleAddExpense(); else if (e.key === 'Escape') closeExpenseInput() }}
               />
               <input
                 type="number"
@@ -118,7 +130,7 @@ export default function Finance() {
                 step="0.01"
                 value={expenseAmount}
                 onChange={e => setExpenseAmount(e.target.value)}
-                onKeyDown={e => e.key === 'Enter' && handleAddExpense()}
+                onKeyDown={e => { if (e.key === 'Enter') handleAddExpense(); else if (e.key === 'Escape') closeExpenseInput() }}
               />
               <button onClick={handleAddExpense}>Save</button>
             </div>

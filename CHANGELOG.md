@@ -1,5 +1,15 @@
 # Changelog
 
+## v1.0.2 — Keyboard Navigation
+
+- **Added**: Escape key support to close/cancel input forms
+- **Impact**: Users can now cancel input entry with Escape (standard keyboard UX)
+- **Files Changed**: Finance.jsx
+- **Why**: Improves keyboard accessibility and matches standard form behavior
+- **Behavior**:
+  - Enter: Save the entry
+  - Escape: Cancel and close form (clear inputs, hide form)
+
 ## v0.1.0
 
 - Routing shell: 6 modes (Home, Work, Personal Learning, Class, Entertainment, Finance) with hash-based JS routing
