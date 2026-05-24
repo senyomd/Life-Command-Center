@@ -1,5 +1,13 @@
 # Changelog
 
+## v1.1.2 — Habit Streak Celebration
+
+- **Added**: Fire emoji (🔥) to active habit streaks
+- **Impact**: Gamifies habit tracking, celebrates consistency
+- **Files Changed**: Home.jsx
+- **Why**: Visual reward reinforces positive behavior and motivates continuation
+- **Display**: "🔥 3-day streak" with best streak shown alongside
+
 ## v1.1.1 — Home Dashboard Polish
 
 - **Added**: Delta arrows (↑↓→) on metric cards

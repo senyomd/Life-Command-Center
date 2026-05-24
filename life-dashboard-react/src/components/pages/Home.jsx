@@ -161,7 +161,18 @@ function Home() {
                   const isDefault = !!habit.isDefault
                   return (
                     <tr key={habit.id}>
-                      <td style={{ paddingBottom: 8, paddingRight: 16, color: 'var(--text)' }}>{habit.name}</td>
+                      <td style={{ paddingBottom: 8, paddingRight: 16 }}>
+                        <div style={{ color: 'var(--text)', fontSize: 12, fontWeight: 500 }}>{habit.name}</div>
+                        <div style={{ fontSize: 11, marginTop: 2 }}>
+                          {habit.streak?.current > 0
+                            ? <span style={{ color: '#f97316', fontWeight: 600 }}>🔥 {habit.streak.current}-day streak</span>
+                            : <span style={{ color: 'var(--muted)' }}>No streak yet</span>
+                          }
+                          {habit.streak?.best > 0 && (
+                            <span style={{ color: 'var(--muted)', marginLeft: 8 }}>· Best: {habit.streak.best}</span>
+                          )}
+                        </div>
+                      </td>
                       {weekDates.map((d) => {
                         const done    = completionSet.has(d)
                         const isToday = d === today
