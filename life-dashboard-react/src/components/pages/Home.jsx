@@ -2,7 +2,15 @@ import React, { useState } from 'react'
 import { useAnalyticsEngine } from '../../lib/hooks/useAnalyticsEngine'
 import { useHabitEngine } from '../../lib/hooks/useHabitEngine'
 
-function MetricCard({ label, value, sub, color }) {
+function deltaArrow(d) {
+  if (d === null || d === undefined) return null
+  if (d > 0) return { arrow: '↑', color: '#22c55e', sign: '+' }
+  if (d < 0) return { arrow: '↓', color: '#ef4444', sign: '' }
+  return { arrow: '→', color: 'var(--muted)', sign: '' }
+}
+
+function MetricCard({ label, value, sub, color, delta, deltaUnit }) {
+  const di = deltaArrow(delta)
   return (
     <div className="card" style={{ textAlign: 'center' }}>
       <div className="card-label">{label}</div>
@@ -10,12 +18,18 @@ function MetricCard({ label, value, sub, color }) {
         {value}
       </div>
       {sub && <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 4 }}>{sub}</div>}
+      {di && (
+        <div style={{ fontSize: 12, fontWeight: 600, color: di.color, marginTop: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 3 }}>
+          <span style={{ fontSize: 14, fontWeight: 800 }}>{di.arrow}</span>
+          {di.sign}{delta}{deltaUnit ?? '%'}
+        </div>
+      )}
     </div>
   )
 }
 
 function Home() {
-  const { dashboard } = useAnalyticsEngine()
+  const { dashboard, comparison } = useAnalyticsEngine()
   const { engine: habitEngine, habits, weekDates, today, toggle, addHabit, removeHabit } = useHabitEngine()
 
   const [showAddModal, setShowAddModal]       = useState(false)
@@ -30,6 +44,7 @@ function Home() {
   const deepWorkRatio   = dashboard?.deepWorkRatio   ?? 0
 
   const focusHrsDisplay = totalFocusTime.toFixed(1) + 'h'
+  const deltas = comparison?.deltas ?? {}
 
   function scoreColor(score) {
     if (score >= 80) return '#22c55e'
@@ -84,30 +99,36 @@ function Home() {
           value={`${focusScore.toFixed(0)}%`}
           sub="This week"
           color={scoreColor(focusScore)}
+          delta={deltas.focusScore}
         />
         <MetricCard
           label="Task Execution"
           value={`${taskExecution.toFixed(0)}%`}
           sub="Completion rate"
           color={scoreColor(taskExecution)}
+          delta={deltas.taskExecution}
         />
         <MetricCard
           label="Habit Consistency"
           value={`${habitConsist.toFixed(0)}%`}
           sub="This week"
           color={scoreColor(habitConsist)}
+          delta={deltas.habitConsistency}
         />
         <MetricCard
           label="Focus Time"
           value={focusHrsDisplay}
           sub="This week"
           color="var(--text)"
+          delta={deltas.totalFocusTime}
+          deltaUnit="h"
         />
         <MetricCard
           label="Deep Work"
           value={`${(deepWorkRatio * 100).toFixed(0)}%`}
           sub="Of focus sessions"
           color={scoreColor(deepWorkRatio * 100)}
+          delta={deltas.deepWorkRatio}
         />
       </div>
 

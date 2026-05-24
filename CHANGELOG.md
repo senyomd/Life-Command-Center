@@ -1,5 +1,14 @@
 # Changelog
 
+## v1.1.1 — Home Dashboard Polish
+
+- **Added**: Delta arrows (↑↓→) on metric cards
+- **Impact**: Instantly shows trend direction (up/down/stable) vs last week
+- **Files Changed**: Home.jsx
+- **Why**: Visual feedback helps users understand performance trends at a glance
+- **Example**: "Task Completion: ↑ +5%" (green arrow = improving)
+- **Data source**: `AnalyticsEngine.getStatsComparison()` — real this-week vs last-week deltas
+
 ## v1.0.3 — Input Validation
 
 - **Added**: Inline validation errors for invalid input
