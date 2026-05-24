@@ -2,6 +2,9 @@ import React, { useState } from 'react'
 import { useFinanceEngine } from '../../lib/hooks/useFinanceEngine'
 import './Finance.css'
 
+const formatCurrency = (amount) =>
+  new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount)
+
 export default function Finance() {
   const { income, expenses, addIncome, addExpense, removeIncome, removeExpense, getTotalIncome, getTotalExpenses, getNetWorth } = useFinanceEngine()
 
@@ -36,7 +39,7 @@ export default function Finance() {
       <div className="net-worth-header">
         <div className="net-worth-label">NET WORTH</div>
         <div className={`net-worth-amount ${netWorth >= 0 ? 'positive' : 'negative'}`}>
-          {netWorth < 0 ? '-' : ''}${Math.abs(netWorth).toFixed(2)}
+          {formatCurrency(netWorth)}
         </div>
       </div>
 
@@ -80,14 +83,14 @@ export default function Finance() {
             {income.map(item => (
               <div key={item.id} className="item">
                 <span className="item-name">{item.name}</span>
-                <span className="item-amount income-amount">${item.amount.toFixed(2)}</span>
+                <span className="item-amount income-amount">{formatCurrency(item.amount)}</span>
                 <button className="delete-btn" onClick={() => removeIncome(item.id)}>✕</button>
               </div>
             ))}
           </div>
 
           <div className="column-total">
-            Total: <span className="income-total">${getTotalIncome().toFixed(2)}</span>
+            Total: <span className="income-total">{formatCurrency(getTotalIncome())}</span>
           </div>
         </div>
 
@@ -128,14 +131,14 @@ export default function Finance() {
             {expenses.map(item => (
               <div key={item.id} className="item">
                 <span className="item-name">{item.name}</span>
-                <span className="item-amount expense-amount">${item.amount.toFixed(2)}</span>
+                <span className="item-amount expense-amount">{formatCurrency(item.amount)}</span>
                 <button className="delete-btn" onClick={() => removeExpense(item.id)}>✕</button>
               </div>
             ))}
           </div>
 
           <div className="column-total">
-            Total: <span className="expense-total">${getTotalExpenses().toFixed(2)}</span>
+            Total: <span className="expense-total">{formatCurrency(getTotalExpenses())}</span>
           </div>
         </div>
 
